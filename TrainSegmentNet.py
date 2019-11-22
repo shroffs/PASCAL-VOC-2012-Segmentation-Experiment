@@ -9,6 +9,7 @@ from SegmentNet import SegmentNet
 from tqdm import tqdm
 import sys
 
+print("Loading Data...")
 X_train = np.load("./VOCdevkit/VOC2012/Training_Enc.npy", allow_pickle=True)
 #X_val = np.load("./VOCdevkit/VOC2012/Val_Enc.npy")
 
@@ -19,22 +20,31 @@ Y_train = np.load("./VOCdevkit/VOC2012/Training_Labels_Enc.npy")
 
 trainset = list(zip(X_train,Y_train))
 
-X_train_loader = DataLoader(trainset, batch_size=1)
+X_train_loader = torch.utils.data.DataLoader(trainset, batch_size=1)
 
 device = torch.device(0)
 
+def net_init(model):
+    classname = model.__class__.__name__
+    if classname.find('Conv2d') != -1:
+        model.weight.data.uniform_(0.0, 1.0)
+        model.bias.data.fill_(0.0)
+
+print("Initializing Network")
 net = SegmentNet().type(torch.cuda.HalfTensor).cuda()
+net.apply(net_init)
 
 EPOCHS = 1
 
 def train(net):
     print("Training Beginning")
-    optimizer = optim.Adam(net.parameters(), lr=0.01)
-    criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,])).cuda()
-    for epoch in tqdm(range(EPOCHS)):
-        for data in X_train_loader:
-            X, label = data[0].type(torch.cuda.HalfTensor), data[1].type(torch.cuda.HalfTensor)
-            X, label = X.to(device), label.to(device)
+    optimizer = optim.Adam(net.parameters(), lr=0.005, eps=1e-4)
+    criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0])).cuda()
+    for epoch in range(EPOCHS):
+        loss_track = 0.0
+        for data in enumerate(tqdm(X_train_loader)):
+            X, label = data[1][0].type(torch.cuda.HalfTensor), data[1][1].type(torch.cuda.HalfTensor)
+
             
             optimizer.zero_grad()
 
@@ -55,11 +65,23 @@ def train(net):
 
             label = label.squeeze(1)
             loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-    
             loss.backward()
+
+
+            clip = 0.5
+            torch.nn.utils.clip_grad_norm_(net.parameters(), clip)
             optimizer.step()
-        print("Epoch: %d    Loss: %f" % (epoch, loss))
+
+
+
+            loss_track += loss.item()
+            if data[0] % 20 == 1:
+                print("Epoch: %d    Loss: %.5f\n" % (epoch+1, loss_track))
+                loss_track = 0.0
         
 train(net)
+#16:14 min/epoch
+
+torch.save(net.state_dict(), "./TrainedNet-1EPOCH")
 
 

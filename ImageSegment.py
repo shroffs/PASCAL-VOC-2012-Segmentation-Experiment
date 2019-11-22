@@ -4,26 +4,29 @@ from SegmentNet import SegmentNet
 import torch
 
 #set device to GPU
-device = torch.set_device(0)
+device = torch.device(0)
 
 #Load in net and parameters
-net_state_dict =
-net = SegmentNet().to(device)
+net_state_dict = ".\\TrainedNet-1EPOCH"
+net = SegmentNet().type(torch.cuda.HalfTensor).cuda()
 net.load_state_dict(torch.load(net_state_dict))
 net.eval()
 
-img_path =
-img = cv2.imread(img_path)
-h, w, c = img.shape
+img_path = "C:\\Users\\Spencer\\Documents\\GitHub\\PASCAL-VOC-2012-Segmentation-Experiement\\VOCdevkit\\VOC2012\\JPEGImages\\2007_000027.jpg"
+img = cv2.imread(img_path, 1)
+
 
 def encode_image(img): #any image HxWxC
     img = cv2.resize(img, (512,512))
-    img = np.swapaxes(0,2)
+    img = np.swapaxes(img,0,2)
+    img = torch.tensor(img).type(torch.cuda.HalfTensor)
+    img = img.unsqueeze_(0)
     return img
 
 def decode_image(label): #21x512x512
-    img = np.zeros (512,512,3)
-
+    res = np.zeros((512,512,3))
+    label = label.to('cpu').detach().numpy()
+    label = np.squeeze(label, 0)
     label = np.swapaxes(label, 0,2)
 
     classes = [[192, 224, 224], [0, 0, 0], [0, 0, 128],
@@ -34,14 +37,19 @@ def decode_image(label): #21x512x512
                [0, 64, 0], [0, 64, 128], [0, 192, 0], [0, 192, 128],
                [128, 64, 0]]
 
-    keys = range(21)
+    for i in range(len(label)):
+        for j in range(len(label[i])):
+            res[i][j] = classes[np.argmax(label[i][j])]
 
-    dictionary = dict(zip(keys, classes))
+    return res
 
-    for i in range(len(img)):
-        for j in range(len(img[i])):
-            img[i][j] = dictionary[label[i][j]]
+img_enc = encode_image(img)
+label = net(img_enc)
+res = decode_image(label)
 
-
+print(res)
+cv2.imshow('seg', res)
+cv2.imshow('img', img)
+cv2.waitKey(0)
 
 

@@ -15,7 +15,9 @@ class SegmentNet(nn.Module):
         #Contracting
         self.pool = nn.MaxPool2d(2,2)
         self.upsample = nn.Upsample(scale_factor = 2, mode = 'bilinear', align_corners=False)
-        self.relu = nn.LeakyReLU(negative_slope=0.01)
+        self.tanh = nn.Tanh()
+        self.norm = nn.LayerNorm((3,512,512))
+        self.softmax = nn.Softmax2d()
 
         self.conv1_1 = nn.Conv2d(3, 64, 3, padding=1)
         self.bn1_1 = nn.BatchNorm2d(64, momentum=0.1)
@@ -74,50 +76,52 @@ class SegmentNet(nn.Module):
         Returns:
             x: 21x512x512 array of predictions
         """
-        x = self.relu(self.bn1_1(self.conv1_1(x)))
-        x = self.relu(self.bn1_2(self.conv1_2(x)))
+        x = self.norm(x)
+        x = self.tanh(self.bn1_1(self.conv1_1(x)))
+        x = self.tanh(self.bn1_2(self.conv1_2(x)))
         skip1 = x.clone()
         x = self.pool(x)
 
-        x = self.relu(self.bn2_1(self.conv2_1(x)))
-        x = self.relu(self.bn2_2(self.conv2_2(x)))
+        x = self.tanh(self.bn2_1(self.conv2_1(x)))
+        x = self.tanh(self.bn2_2(self.conv2_2(x)))
         skip2 = x.clone()
         x = self.pool(x)
 
-        x = self.relu(self.bn3_1(self.conv3_1(x)))
-        x = self.relu(self.bn3_2(self.conv3_2(x)))
+        x = self.tanh(self.bn3_1(self.conv3_1(x)))
+        x = self.tanh(self.bn3_2(self.conv3_2(x)))
         skip3 = x.clone()
         x = self.pool(x)
 
-        x = self.relu(self.bn4_1(self.conv4_1(x)))
-        x = self.relu(self.bn4_2(self.conv4_2(x)))
+        x = self.tanh(self.bn4_1(self.conv4_1(x)))
+        x = self.tanh(self.bn4_2(self.conv4_2(x)))
         skip4 = x.clone()
         x = self.pool(x)
 
-        x = self.relu(self.bn5_1(self.conv5_1(x)))
-        x = self.relu(self.bn5_2(self.conv5_2(x)))
+        x = self.tanh(self.bn5_1(self.conv5_1(x)))
+        x = self.tanh(self.bn5_2(self.conv5_2(x)))
 
         x = self.upsample(x)
-        x = self.relu(self.bn6_1(self.conv6_1(x)))
+        x = self.tanh(self.bn6_1(self.conv6_1(x)))
         x = torch.cat((skip4, x), dim=1)
-        x = self.relu(self.bn6_2(self.conv6_2(x)))
+        x = self.tanh(self.bn6_2(self.conv6_2(x)))
 
         x = self.upsample(x)
-        x = self.relu(self.bn7_1(self.conv7_1(x)))
+        x = self.tanh(self.bn7_1(self.conv7_1(x)))
         x = torch.cat((skip3, x), dim=1)
-        x = self.relu(self.bn7_2(self.conv7_2(x)))
+        x = self.tanh(self.bn7_2(self.conv7_2(x)))
 
         x = self.upsample(x)
-        x = self.relu(self.bn8_1(self.conv8_1(x)))
+        x = self.tanh(self.bn8_1(self.conv8_1(x)))
         x = torch.cat((skip2, x), dim=1)
-        x = self.relu(self.bn8_2(self.conv8_2(x)))
+        x = self.tanh(self.bn8_2(self.conv8_2(x)))
 
         x = self.upsample(x)
-        x = self.relu(self.bn9_1(self.conv9_1(x)))
+        x = self.tanh(self.bn9_1(self.conv9_1(x)))
         x = torch.cat((skip1, x), dim=1)
-        x = self.relu(self.bn9_2(self.conv9_2(x)))
+        x = self.tanh(self.bn9_2(self.conv9_2(x)))
 
         x = self.conv10_1(x)
+        x = self.softmax(x)
 
         return x
 
