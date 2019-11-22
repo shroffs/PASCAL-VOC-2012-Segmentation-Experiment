@@ -5,6 +5,7 @@ import torch
 class SegmentNet(nn.Module):
 
     def __init__(self):
+
         ''' Initialized layers to network
             note: padding 1 chosen to preserve shape of inputs relative to outputs
         '''
@@ -13,7 +14,7 @@ class SegmentNet(nn.Module):
 
         #Contracting
         self.pool = nn.MaxPool2d(2,2)
-        self.upsample = nn.Upsample(scale_factor = 2, mode = 'bilinear')
+        self.upsample = nn.Upsample(scale_factor = 2, mode = 'bilinear', align_corners=False)
         self.relu = nn.LeakyReLU(negative_slope=0.01)
 
         self.conv1_1 = nn.Conv2d(3, 64, 3, padding=1)
@@ -62,10 +63,7 @@ class SegmentNet(nn.Module):
         self.conv9_2 = nn.Conv2d(128, 64, 3, padding=1)
         self.bn9_2 = nn.BatchNorm2d(64, momentum=0.1)
 
-        self.conv10_1 = nn.Conv2d(64, 21, 3,)
-        self.bn10_1 = nn.BatchNorm2d(21)
-
-        self.softmax = nn.Softmax2d()
+        self.conv10_1 = nn.Conv2d(64, 21, 3, padding=1)
 
     def forward(self, x):
         """Network predicts labels for every pixel in the arr x
@@ -101,26 +99,25 @@ class SegmentNet(nn.Module):
 
         x = self.upsample(x)
         x = self.relu(self.bn6_1(self.conv6_1(x)))
-        x = torch.cat([skip4, x], dim=0)
+        x = torch.cat((skip4, x), dim=1)
         x = self.relu(self.bn6_2(self.conv6_2(x)))
 
         x = self.upsample(x)
         x = self.relu(self.bn7_1(self.conv7_1(x)))
-        x = torch.cat([skip3, x], dim=0)
+        x = torch.cat((skip3, x), dim=1)
         x = self.relu(self.bn7_2(self.conv7_2(x)))
 
         x = self.upsample(x)
         x = self.relu(self.bn8_1(self.conv8_1(x)))
-        x = torch.cat([skip2, x], dim=0)
+        x = torch.cat((skip2, x), dim=1)
         x = self.relu(self.bn8_2(self.conv8_2(x)))
 
         x = self.upsample(x)
         x = self.relu(self.bn9_1(self.conv9_1(x)))
-        x = torch.cat([skip1, x], dim=0)
+        x = torch.cat((skip1, x), dim=1)
         x = self.relu(self.bn9_2(self.conv9_2(x)))
 
-        x = self.relu(self.bn10_1(self.conv10_1(x)))
-        x = self.softmax(x)
+        x = self.conv10_1(x)
 
         return x
 
