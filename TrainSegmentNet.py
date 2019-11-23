@@ -1,13 +1,11 @@
 from torch.utils.data import DataLoader
-from DataFormat import ImageData
 import torch.optim as optim
 import numpy as np
-import torch.nn as nn
-import torch.tensor as tensor
 import torch
 from SegmentNet import SegmentNet
 from tqdm import tqdm
 import sys
+from torchsummary import summary
 
 print("Loading Data...")
 X_train = np.load("./VOCdevkit/VOC2012/Training_Enc.npy", allow_pickle=True)
@@ -28,7 +26,8 @@ def net_init(model):
     classname = model.__class__.__name__
     if classname.find('Conv2d') != -1:
         model.weight.data.uniform_(0.0, 1.0)
-        model.bias.data.fill_(0.0)
+        if model.bias is not None:
+            model.bias.data.fill_(0.0)
 
 print("Initializing Network")
 net = SegmentNet().type(torch.cuda.HalfTensor).cuda()
@@ -37,7 +36,7 @@ net.apply(net_init)
 EPOCHS = 1
 
 def dice_loss(true, logits, eps=1e-7): #https://github.com/kevinzakka/pytorch-goodies.git
-    """Computes the Sørensen–Dice loss.
+    """"Computes the Sørensen–Dice loss.
     Note that PyTorch optimizers minimize a loss. In this
     case, we would like to maximize the dice loss so we
     return the negated dice loss.
@@ -72,7 +71,7 @@ def dice_loss(true, logits, eps=1e-7): #https://github.com/kevinzakka/pytorch-go
 
 def train(net):
     print("Training Beginning")
-    optimizer = optim.Adam(net.parameters(), lr=0.005 , eps=1e-4)
+    optimizer = optim.Adam(net.parameters(), lr=0.005, eps=1e-4)
     #criterion = nn.CrossEntropyLoss(weight=tensor([3.0,1.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0])).cuda()
     for epoch in range(EPOCHS):
         loss_track = 0.0
@@ -99,7 +98,7 @@ def train(net):
 
             label = label.squeeze(1)
             #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-            loss = dice_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor))
+            loss = dice_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-3)
             loss.backward()
 
 
