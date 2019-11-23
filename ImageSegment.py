@@ -7,7 +7,7 @@ import torch
 device = torch.device(0)
 
 #Load in net and parameters
-net_state_dict = ".\\TrainedNet-1EPOCH"
+net_state_dict = ".\\TrainedNet2-1EPOCH"
 net = SegmentNet().type(torch.cuda.HalfTensor).cuda()
 net.load_state_dict(torch.load(net_state_dict))
 net.eval()
@@ -28,6 +28,8 @@ def decode_image(label): #21x512x512
     label = label.to('cpu').detach().numpy()
     label = np.squeeze(label, 0)
     label = np.swapaxes(label, 0,2)
+
+    print(label)
 
     classes = [[192, 224, 224], [0, 0, 0], [0, 0, 128],
                [0, 128, 0], [0, 128, 128], [128, 0, 0],
