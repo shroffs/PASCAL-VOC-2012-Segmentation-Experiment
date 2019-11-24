@@ -10,24 +10,24 @@ class res_contract(nn.Module):
         self.in_channel = in_channel
         self.out_channel = out_channel
 
-        self.tanh = nn.Tanh()
+        self.relu = nn.ReLU()
 
         self.skip_conv = nn.Conv2d(self.in_channel, self.out_channel, 1, bias=False)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(self.out_channel, momentum=0.1)
+        self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
         self.conv2 = nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(self.out_channel, momentum=0.1)
+        self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x):
         """ Residual connection between all sequential conv layers and returns skip to be use layer in expanding output same size
 
         """
         r1 = self.skip_conv(x)
-        x = self.tanh(self.bn1(self.conv1(x)))
+        x = self.bn1(self.relu(self.conv1(x)))
         x = torch.add(x, r1)
         r2 = x.clone()
-        x = self.tanh(self.bn2(self.conv2(x)))
+        x = self.bn2(self.relu(self.conv2(x)))
         x = torch.add(x, r2)
         skip = x.clone()
 
@@ -41,25 +41,25 @@ class res_expand(nn.Module):
         self.in_channel = in_channel
         self.out_channel = out_channel
 
-        self.tanh = nn.Tanh()
+        self.relu = nn.ReLU()
 
         self.skip_conv = nn.Conv2d(self.in_channel, self.out_channel, 1, bias=False)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(self.out_channel, momentum=0.1)
+        self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
         self.conv2 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(self.out_channel, momentum=0.1)
+        self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x, skip):
         """Residual connection between all sequential conv layers and takes in skip from contracting layer of same size
 
         """
         r1 = self.skip_conv(x)
-        x = self.tanh(self.bn1(self.conv1(x)))
+        x = self.bn1(self.relu(self.conv1(x)))
         x = torch.add(x, r1)
         x = torch.cat((skip, x), dim=1)
         r2 = self.skip_conv(x)
-        x = self.tanh(self.bn2(self.conv2(x)))
+        x = self.bn2(self.relu(self.conv2(x)))
         x = torch.add(x, r2)
 
         return x
@@ -70,7 +70,7 @@ class SegmentNet(nn.Module):
 
         super(SegmentNet, self).__init__()
 
-        self.norm = nn.LayerNorm((3, 512, 512))
+        self.norm = nn.LayerNorm((3, 512, 512), eps=1e-5)
 
         # Contracting
         self.pool = nn.MaxPool2d(2, 2)
@@ -88,6 +88,7 @@ class SegmentNet(nn.Module):
         self.expand4 = res_expand(128,64)
 
         self.conv10 = nn.Conv2d(64, 21, 1)
+        self.relu = nn.Tanh()
         self.softmax = nn.Softmax2d()
 
 
@@ -121,7 +122,7 @@ class SegmentNet(nn.Module):
         x = self.upsample(x)
         x = self.expand4(x, skip1)
 
-        x = self.conv10(x)
+        x = self.relu(self.conv10(x))
         x = self.softmax(x)
 
         return x

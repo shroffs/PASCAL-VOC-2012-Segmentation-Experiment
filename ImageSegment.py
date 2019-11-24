@@ -7,19 +7,19 @@ import torch
 device = torch.device(0)
 
 #Load in net and parameters
-net_state_dict = ".\\TrainedNet2-1EPOCH"
-net = SegmentNet().type(torch.cuda.HalfTensor).cuda()
+net_state_dict = ".\\TrainedNet3-5EPOCH"
+net = SegmentNet().type(torch.cuda.FloatTensor).cuda()
 net.load_state_dict(torch.load(net_state_dict))
 net.eval()
 
-img_path = "C:\\Users\\Spencer\\Documents\\GitHub\\PASCAL-VOC-2012-Segmentation-Experiement\\VOCdevkit\\VOC2012\\JPEGImages\\2007_000027.jpg"
+img_path = "C:\\Users\\Spencer\\Documents\\GitHub\\PASCAL-VOC-2012-Segmentation-Experiement\\VOCdevkit\\VOC2012\\JPEGImages\\2007_000032.jpg"
 img = cv2.imread(img_path, 1)
 
 
 def encode_image(img): #any image HxWxC
     img = cv2.resize(img, (512,512))
     img = np.swapaxes(img,0,2)
-    img = torch.tensor(img).type(torch.cuda.HalfTensor)
+    img = torch.tensor(img).type(torch.cuda.FloatTensor)
     img = img.unsqueeze_(0)
     return img
 
@@ -47,6 +47,7 @@ def decode_image(label): #21x512x512
 
 img_enc = encode_image(img)
 label = net(img_enc)
+print(label)
 res = decode_image(label)
 
 print(res)

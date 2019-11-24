@@ -3,9 +3,11 @@ import torch.optim as optim
 import numpy as np
 import torch
 from SegmentNet import SegmentNet
+from BabySegmentNet import BabySegmentNet
 from tqdm import tqdm
 import sys
-from torchsummary import summary
+import torch.nn as nn
+from torch import tensor
 
 print("Loading Data...")
 X_train = np.load("./VOCdevkit/VOC2012/Training_Enc.npy", allow_pickle=True)
@@ -18,7 +20,7 @@ Y_train = np.load("./VOCdevkit/VOC2012/Training_Labels_Enc.npy")
 
 trainset = list(zip(X_train,Y_train))
 
-X_train_loader = torch.utils.data.DataLoader(trainset, batch_size=1)
+X_train_loader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
 
 device = torch.device(0)
 
@@ -30,23 +32,23 @@ def net_init(model):
             model.bias.data.fill_(0.0)
 
 print("Initializing Network")
-net = SegmentNet().type(torch.cuda.HalfTensor).cuda()
+net = BabySegmentNet().type(torch.cuda.FloatTensor).cuda
 net.apply(net_init)
 
 EPOCHS = 1
 
-def dice_loss(true, logits, eps=1e-7): #https://github.com/kevinzakka/pytorch-goodies.git
-    """"Computes the Sørensen–Dice loss.
+def jaccard_loss(true, logits, eps=1e-7):
+    """Computes the Jaccard loss, a.k.a the IoU loss.
     Note that PyTorch optimizers minimize a loss. In this
-    case, we would like to maximize the dice loss so we
-    return the negated dice loss.
+    case, we would like to maximize the jaccard loss so we
+    return the negated jaccard loss.
     Args:
-        true: a tensor of shape [B, 1, H, W].
+        true: a tensor of shape [B, H, W] or [B, 1, H, W].
         logits: a tensor of shape [B, C, H, W]. Corresponds to
             the raw output or logits of the model.
         eps: added to the denominator for numerical stability.
     Returns:
-        dice_loss: the Sørensen–Dice loss.
+        jacc_loss: the Jaccard loss.
     """
     num_classes = logits.shape[1]
     if num_classes == 1:
@@ -61,22 +63,24 @@ def dice_loss(true, logits, eps=1e-7): #https://github.com/kevinzakka/pytorch-go
     else:
         true_1_hot = torch.eye(num_classes)[true.squeeze(1)]
         true_1_hot = true_1_hot.permute(0, 3, 1, 2).float()
-        probas = torch.nn.Softmax(dim=1)(logits)
+        probas = nn.Softmax(dim=1)(logits)
     true_1_hot = true_1_hot.type(logits.type())
     dims = (0,) + tuple(range(2, true.ndimension()))
     intersection = torch.sum(probas * true_1_hot, dims)
     cardinality = torch.sum(probas + true_1_hot, dims)
-    dice_loss = (2. * intersection / (cardinality + eps)).mean()
-    return (1 - dice_loss)
+    union = cardinality - intersection
+    jacc_loss = (intersection / (union + eps)).mean()
+    return (1 - jacc_loss)
 
 def train(net):
     print("Training Beginning")
-    optimizer = optim.Adam(net.parameters(), lr=0.005, eps=1e-4)
-    #criterion = nn.CrossEntropyLoss(weight=tensor([3.0,1.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0,50.0])).cuda()
+    optimizer = optim.RMSprop(net.parameters(), lr=0.01, momentum=0.9, eps=1e-4)
+    #optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.01, max_lr=0.1, step_size_up=20)
+    #criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0])).cuda()
     for epoch in range(EPOCHS):
         loss_track = 0.0
         for data in enumerate(tqdm(X_train_loader)):
-            X, label = data[1][0].type(torch.cuda.HalfTensor), data[1][1].type(torch.cuda.HalfTensor)
+            X, label = data[1][0].type(torch.cuda.FloatTensor), data[1][1].type(torch.cuda.FloatTensor)
 
             
             optimizer.zero_grad()
@@ -98,12 +102,12 @@ def train(net):
 
             label = label.squeeze(1)
             #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-            loss = dice_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-3)
+            loss = jaccard_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
             loss.backward()
 
 
-            clip = 0.5
-            torch.nn.utils.clip_grad_norm_(net.parameters(), clip)
+            #clip = 1
+            #torch.nn.utils.clip_grad_norm_(net.parameters(), clip)
             optimizer.step()
 
 
@@ -116,6 +120,6 @@ def train(net):
 train(net)
 #16:14 min/epoch
 
-torch.save(net.state_dict(), "./TrainedNet2-1EPOCH")
+torch.save(net.state_dict(), "./TrainedNet3-1EPOCH")
 
 
