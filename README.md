@@ -1,4 +1,4 @@
-# PASCAL-VOC-2012-Segmentation-Experiement
+# Image Segmentation Experiementation on PASCAL-VOC-2012
 Using a FCN/Unet style network to segment images.  [PASCAL VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/) segementation dataset used as training data.
 ____
 ### The Purpose: Larger Networks and Cloud GPUs
