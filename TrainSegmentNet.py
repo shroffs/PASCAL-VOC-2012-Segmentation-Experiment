@@ -9,7 +9,8 @@ import numpy as np
 import sys
 from tqdm import tqdm
 
-
+import wandb
+wandb.init(project="segmentation-net")
 
 print("Loading Data...")
 trainset = ImageData("./VOCdevkit/VOC2012/SegmentTrain", "./VOCdevkit/VOC2012/SegmentTrainLabels")
@@ -30,6 +31,7 @@ def net_init(model):
 print("Initializing Network...")
 net = SegmentNet().type(torch.cuda.FloatTensor).cuda()
 net.apply(net_init)
+wandb.watch(net)
 print("completed")
 
 EPOCHS = 1
@@ -111,11 +113,11 @@ def train(net):
             loss_track += loss.item()
             if data[0] % 20 == 1:
                 print("Epoch: %d    Loss: %.5f\n" % (epoch+1, loss_track))
+                wandb.log({"Training Loss": loss})
                 loss_track = 0.0
-        break
 
 train(net)
 #16:14 min/epoch
 
-#torch.save(net.state_dict(), "./TrainedNet4-75EPOCH-NoVal")
+torch.save(net.state_dict(), "./TrainedNet1")
 
