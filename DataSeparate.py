@@ -50,7 +50,7 @@ def train_val_sep(portion):
         shutil.move(os.path.join("./VOCdevkit/VOC2012/SegmentationImages", filename), "./VOCdevkit/VOC2012/SegmentVal")
         shutil.move(os.path.join("./VOCdevkit/VOC2012/SegmentationClass", filename[:-4]+".png"), "./VOCdevkit/VOC2012/SegmentValLabels")
 
-train_val_sep(1.0)
+train_val_sep(0.8)
 
 
 

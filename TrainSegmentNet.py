@@ -3,6 +3,7 @@ from SegmentNet import SegmentNet
 from DatasetCreate import ImageData
 import torch
 import torch.optim as optim
+import torch.utils.data as data
 import torch.nn as nn
 from torch import tensor
 import numpy as np
@@ -14,8 +15,10 @@ wandb.init(project="segmentation-net")
 
 print("Loading Data...")
 trainset = ImageData("./VOCdevkit/VOC2012/SegmentTrain", "./VOCdevkit/VOC2012/SegmentTrainLabels")
+valset = ImageData("./VOCdevkit/VOC2012/SegmentVal", "./VOCdevkit/VOC2012/SegmentValLabels")
 
-X_train_loader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
+train_loader = data.DataLoader(trainset, batch_size=1, shuffle=True)
+val_loader = data.DataLoader(valset, batch_size=1, shuffle=True)
 print("completed.")
 
 device = torch.device(0)
@@ -78,12 +81,12 @@ def train(net):
     #criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0])).cuda()
     for epoch in range(EPOCHS):
         loss_track = 0.0
-        for data in enumerate(tqdm(X_train_loader)):
+        for data in enumerate(tqdm(train_loader)):
             X, label = data[1][0].type(torch.cuda.FloatTensor), data[1][1].type(torch.cuda.FloatTensor)
             
             optimizer.zero_grad()
 
-            #small GPU: only 3GiB :(
+            #small GPU: only 3GiB :( Cloud GPU :)
             try:
                 output_label = net(X)
             except RuntimeError as e:
@@ -100,7 +103,7 @@ def train(net):
 
             label = label.squeeze(1)
             #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-            loss = jaccard_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
+            loss = jaccard_loss(label.type(torch.cuda.FloatTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
             loss.backward()
 
 
@@ -112,12 +115,26 @@ def train(net):
 
             loss_track += loss.item()
             if data[0] % 20 == 1:
-                print("Epoch: %d    Loss: %.5f\n" % (epoch+1, loss_track))
-                wandb.log({"Training Loss": loss})
+                print("Epoch: %d    Training Loss: %.5f\n" % (epoch+1, loss_track))
+                wandb.log({"Training Loss": loss_track})
                 loss_track = 0.0
+
+            if data[0] % 582 == 0:
+                print("Running Validation...")
+                track_val_loss = 0.0
+                with torch.no_grad():
+                    for val in val_loader:
+                        val_img, val_lab = val[0].type(torch.cuda.FloatTensor), val[1].type(torch.cuda.FloatTensor)
+                        output_label = net(val_img)
+                        val_lab = val_lab.squeeze(1)
+                        val_loss = jaccard_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
+                        track_val_loss += val_loss
+                track_val_loss = track_val_loss/26.4
+                print("Validation Loss: %.5f\n" % (track_val_loss))
+                wandb.log({"Validation Loss": track_val_loss})
+
 
 train(net)
 #16:14 min/epoch
 
 torch.save(net.state_dict(), "./TrainedNet1")
-
