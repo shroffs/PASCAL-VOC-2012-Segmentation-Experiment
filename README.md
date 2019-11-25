@@ -46,4 +46,5 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  ___
  ### Training
  * resized all images to 512x512 so batch size could be greater than 1
- * track losses with W and B.
+ * track losses with W and B. (we'll see if this works)
+ 
