@@ -1,28 +1,24 @@
 from torch.utils.data import DataLoader
-import torch.optim as optim
-import numpy as np
-import torch
 from SegmentNet import SegmentNet
-from BabySegmentNet import BabySegmentNet
-from tqdm import tqdm
-import sys
+from DatasetCreate import ImageData
+import torch
+import torch.optim as optim
 import torch.nn as nn
 from torch import tensor
+import numpy as np
+import sys
+from tqdm import tqdm
+
+
 
 print("Loading Data...")
-X_train = np.load("./VOCdevkit/VOC2012/Training_Enc.npy", allow_pickle=True)
-#X_val = np.load("./VOCdevkit/VOC2012/Val_Enc.npy")
-
-Y_train = np.load("./VOCdevkit/VOC2012/Training_Labels_Enc.npy")
-#Y_val = np.load("./VOCdevkit/VOC2012/Val_Labels_Enc.npy")
-
-#1min:39sec:23ms to load all data
-
-trainset = list(zip(X_train, Y_train))
+trainset = ImageData("./VOCdevkit/VOC2012/SegmentTrain", "./VOCdevkit/VOC2012/SegmentTrainLabels")
 
 X_train_loader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
+print("completed.")
 
 device = torch.device(0)
+
 
 def net_init(model):
     classname = model.__class__.__name__
@@ -31,9 +27,10 @@ def net_init(model):
         if model.bias is not None:
             model.bias.data.fill_(0.0)
 
-print("Initializing Network")
-net = SegmentNet().type(torch.cuda.FloatTensor).cuda
+print("Initializing Network...")
+net = SegmentNet().type(torch.cuda.FloatTensor).cuda()
 net.apply(net_init)
+print("completed")
 
 EPOCHS = 1
 
@@ -81,7 +78,6 @@ def train(net):
         loss_track = 0.0
         for data in enumerate(tqdm(X_train_loader)):
             X, label = data[1][0].type(torch.cuda.FloatTensor), data[1][1].type(torch.cuda.FloatTensor)
-
             
             optimizer.zero_grad()
 
@@ -116,10 +112,10 @@ def train(net):
             if data[0] % 20 == 1:
                 print("Epoch: %d    Loss: %.5f\n" % (epoch+1, loss_track))
                 loss_track = 0.0
-        
+        break
+
 train(net)
 #16:14 min/epoch
 
-torch.save(net.state_dict(), "./TrainedNet4-75EPOCH-NoVal")
-
+#torch.save(net.state_dict(), "./TrainedNet4-75EPOCH-NoVal")
 

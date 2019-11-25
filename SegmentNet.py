@@ -100,27 +100,36 @@ class SegmentNet(nn.Module):
             x: 1xHxW array of predictions
         """
         c, h, w = 3, x.shape[2], x.shape[3]
-        x = nn.LayerNorm((c, h, w), eps=1e-5)
+        x = nn.LayerNorm((3, h, w), eps=1e-5).cuda()(x)
+
+        print(x.shape)
 
         x, skip1 = self.contract1(x)
         x = self.pool(x)
+        print(x.shape)
         x, skip2 = self.contract2(x)
         x = self.pool(x)
+        print(x.shape)
         x, skip3 = self.contract3(x)
         x = self.pool(x)
+        print(x.shape)
         x, skip4 = self.contract4(x)
         x = self.pool(x)
+        print(x.shape)
         x, _ = self.contract5(x)
 
         x = self.upsample(x)
+        print(x.shape)
         x = self.expand1(x, skip4)
         x = self.upsample(x)
+        print(x.shape)
         x = self.expand2(x, skip3)
         x = self.upsample(x)
+        print(x.shape)
         x = self.expand3(x, skip2)
         x = self.upsample(x)
+        print(x.shape)
         x = self.expand4(x, skip1)
-
         x = self.relu(self.conv10(x))
         x = self.softmax(x)
 
