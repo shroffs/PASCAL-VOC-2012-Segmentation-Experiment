@@ -45,5 +45,5 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  11. scp trained model to local machine
  ___
  ### Training
- * Used W and B to track data
  * resized all images to 512x512 so batch size could be greater than 1
+ * track losses with W and B.
