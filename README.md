@@ -2,7 +2,7 @@
 Using a FCN/Unet style network to segment images.  [PASCAL VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/) segementation dataset used as training data.
 ____
 ### The Purpose: Larger Networks and Cloud GPUs
-The initial purpose of this was to exercise making larger more complex networks than plain old CNNs I have made in the past. As a bonus it turns out my GPU did not have the RAM to hanlde such a network and the training that comes with it... meaning I had to step into the world of cloud GPUs.
+The initial purpose of this was to exercise making larger more complex networks than plain old CNNs I have made in the past. As a bonus it turns out my GPU did not have the RAM to handle such a network and the training that comes with it... meaning I had to step into the world of cloud GPUs.
 ___
 ### The Scripts
 The code was initially intended to run locally, meaning i/o was sloppy and runtime was a matter of patients. When I realized I would have to use a cloud GPU, I made the code more modular in a way that made more sense and saved more time. The order this were intended to run looks like this.
