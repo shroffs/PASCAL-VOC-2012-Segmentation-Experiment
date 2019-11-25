@@ -70,8 +70,6 @@ class SegmentNet(nn.Module):
 
         super(SegmentNet, self).__init__()
 
-        self.norm = nn.LayerNorm((3, 512, 512), eps=1e-5)
-
         # Contracting
         self.pool = nn.MaxPool2d(2, 2)
         self.contract1 = res_contract(3, 64)
@@ -96,12 +94,13 @@ class SegmentNet(nn.Module):
         """Network predicts labels for every pixel in the arr x
 
         Args:
-            x: 3x512x512 image
+            x: 3xHxW image
 
         Returns:
-            x: 21x512x512 array of predictions
+            x: 1xHxW array of predictions
         """
-        x = self.norm(x)
+        c, h, w = 3, x.shape[2], x.shape[3]
+        x = nn.LayerNorm((c, h, w), eps=1e-5)
 
         x, skip1 = self.contract1(x)
         x = self.pool(x)

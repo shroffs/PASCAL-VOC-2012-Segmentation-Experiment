@@ -18,7 +18,7 @@ Y_train = np.load("./VOCdevkit/VOC2012/Training_Labels_Enc.npy")
 
 #1min:39sec:23ms to load all data
 
-trainset = list(zip(X_train,Y_train))
+trainset = list(zip(X_train, Y_train))
 
 X_train_loader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=True)
 
@@ -32,7 +32,7 @@ def net_init(model):
             model.bias.data.fill_(0.0)
 
 print("Initializing Network")
-net = BabySegmentNet().type(torch.cuda.FloatTensor).cuda
+net = SegmentNet().type(torch.cuda.FloatTensor).cuda
 net.apply(net_init)
 
 EPOCHS = 1
@@ -120,6 +120,6 @@ def train(net):
 train(net)
 #16:14 min/epoch
 
-torch.save(net.state_dict(), "./TrainedNet3-1EPOCH")
+torch.save(net.state_dict(), "./TrainedNet4-75EPOCH-NoVal")
 
 

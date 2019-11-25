@@ -1,12 +1,19 @@
 import os
 import shutil
 
+#Make dependent directories
+os.mkdir("./VOCdevkit/VOC2012/SegmentTrain")
+os.mkdir("./VOCdevkit/VOC2012/SegmentTrainLabels")
+os.mkdir("./VOCdevkit/VOC2012/SegmentVal")
+os.mkdir("./VOCdevkit/VOC2012/SegmentValLabels")
+os.mkdir("./VOCdevkit/VOC2012/SegmentationImages")
+
 #path to txt file listing filenames of segmented images
-set_path = ".\VOCdevkit\VOC2012\ImageSets\Segmentation\\trainval.txt"
+set_path = "./VOCdevkit/VOC2012/ImageSets/Segmentation/trainval.txt"
 #path to directory of training images
-src_path = ".\VOCdevkit\VOC2012\JPEGImages"
+src_path = "./VOCdevkit/VOC2012/JPEGImages"
 #path to destination directory
-dst_path = ".\VOCdevkit\VOC2012\SegmentationImages"
+dst_path = "./VOCdevkit/VOC2012/SegmentationImages"
 
 def seg_data_sep():
     """Reads text file and copies segmented images to a destination directory
@@ -33,17 +40,17 @@ def train_val_sep(portion):
         portion: percent to use a training. The remaining will become validation
     """
     cut = int(data_len * portion)
-    test_set = os.listdir(".\VOCdevkit\VOC2012\SegmentationImages")[:cut]
-    val_set = os.listdir(".\VOCdevkit\VOC2012\SegmentationImages")[cut:]
+    test_set = os.listdir("./VOCdevkit/VOC2012/SegmentationImages")[:cut]
+    val_set = os.listdir("./VOCdevkit/VOC2012/SegmentationImages")[cut:]
 
     for filename in test_set:
-        shutil.move(os.path.join(".\VOCdevkit\VOC2012\SegmentationImages", filename), ".\VOCdevkit\VOC2012\SegmentTrain")
-        shutil.move(os.path.join(".\VOCdevkit\VOC2012\SegmentationClass", filename[:-4]+".png"), ".\VOCdevkit\VOC2012\SegmentTrainLabels")
+        shutil.move(os.path.join("./VOCdevkit/VOC2012/SegmentationImages", filename), "./VOCdevkit/VOC2012/SegmentTrain")
+        shutil.move(os.path.join("./VOCdevkit/VOC2012/SegmentationClass", filename[:-4]+".png"), "./VOCdevkit/VOC2012/SegmentTrainLabels")
     for filename in val_set:
-        shutil.move(os.path.join(".\VOCdevkit\VOC2012\SegmentationImages", filename), ".\VOCdevkit\VOC2012\SegmentVal")
-        shutil.move(os.path.join(".\VOCdevkit\VOC2012\SegmentationClass", filename[:-4]+".png"), ".\VOCdevkit\VOC2012\SegmentValLabels")
+        shutil.move(os.path.join("./VOCdevkit/VOC2012/SegmentationImages", filename), "./VOCdevkit/VOC2012/SegmentVal")
+        shutil.move(os.path.join("./VOCdevkit/VOC2012/SegmentationClass", filename[:-4]+".png"), "./VOCdevkit/VOC2012/SegmentValLabels")
 
-train_val_sep(0.8)
+train_val_sep(1.0)
 
 
 
