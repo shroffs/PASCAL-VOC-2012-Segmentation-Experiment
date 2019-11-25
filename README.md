@@ -27,6 +27,7 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  ___
  ### Network Architecture
  The architecture I chose for this task is a Fully-Convolutional Network with UNet skip connections and residual layers. This architecture was mainly choosen to be adventurous and explore the pytorch library but if it performs have decently that would be great as well. In the spirit of being adventurous, we also use [Jaccard Loss](https://github.com/kevinzakka/pytorch-goodies/blob/master/losses.py).
+ ![Flowchart Architecture](SegmentNet_flat.png)
  
  ___
  ### Cloud GPUs
