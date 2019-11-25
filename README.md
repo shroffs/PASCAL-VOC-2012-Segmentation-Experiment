@@ -32,7 +32,18 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  
  ___
  ### Cloud GPUs
- Linode will be used. From my understanding the process goes something like this.
- 1. Create a CPU linode (Ubuntu 18.04). We'll call this linode-A
- 2. Create a Volume that can fit you dataset and mount it to linode-A
- 3. WIP :)
+ I chose to use Linode. We create a CPU server to get data ready and a GPU server to actually train on.
+ 1. Create CPU linode (Ubuntu 18.04) and create a Volume mounted to the linode
+ 2. Download the dataset and git clone scripts to volume
+ 3. Create a StackScript to install dependencies and packages (python3.7, CUDA, numpy, etc..) on GPU linode
+ 4. Create a GPU (RTX 6000 32GB) linode (Ubuntu 18.04) with StackScript
+ 6. Shutdown both linodes
+ 7. Detach Volume from CPU linode
+ 8. Attach Volume to GPU linode
+ 9. Start Training and save model when done
+ 10. detach Volume from GPU linode and attach to CPU linode
+ 11. scp trained model to local machine
+ ___
+ ### Training
+ * Used W and B to track data
+ * resized all images to 512x512 so batch size could be greater than 1
