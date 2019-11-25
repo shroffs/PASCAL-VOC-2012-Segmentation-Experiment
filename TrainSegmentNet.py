@@ -119,19 +119,18 @@ def train(net):
                 wandb.log({"Training Loss": loss_track})
                 loss_track = 0.0
 
-            if data[0] % 582 == 0:
-                print("Running Validation...")
-                track_val_loss = 0.0
-                with torch.no_grad():
-                    for val in val_loader:
-                        val_img, val_lab = val[0].type(torch.cuda.FloatTensor), val[1].type(torch.cuda.FloatTensor)
-                        output_label = net(val_img)
-                        val_lab = val_lab.squeeze(1)
-                        val_loss = jaccard_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
-                        track_val_loss += val_loss
-                track_val_loss = track_val_loss/26.4
-                print("Validation Loss: %.5f\n" % (track_val_loss))
-                wandb.log({"Validation Loss": track_val_loss})
+        print("Running Validation...")
+        track_val_loss = 0.0
+        with torch.no_grad():
+            for val in enumerate(tqdm(val_loader)):
+                val_img, val_lab = val[1][0].type(torch.cuda.FloatTensor), val[1][1].type(torch.cuda.FloatTensor)
+                output_label = net(val_img)
+                val_lab = val_lab.squeeze(1)
+                val_loss = jaccard_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
+                track_val_loss += val_loss
+        track_val_loss = track_val_loss/26.4
+        print("Validation Loss: %.5f\n" % track_val_loss)
+        wandb.log({"Validation Loss": track_val_loss})
 
 
 train(net)
