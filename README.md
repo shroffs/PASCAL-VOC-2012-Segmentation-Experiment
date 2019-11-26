@@ -32,7 +32,7 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  
  ___
  ### Cloud GPUs
- I chose to use Linode. We create a CPU server to get data ready and a GPU server to actually train on.
+ I chose to use Linode. We create a CPU server to get data ready and a GPU server to actually train on. The plan goes like so:
  1. Create CPU linode (Ubuntu 18.04) and create a Volume mounted to the linode
  2. Download the dataset and git clone scripts to volume
  3. Create a StackScript to install dependencies and packages (python3.7, CUDA, numpy, etc..) on GPU linode
