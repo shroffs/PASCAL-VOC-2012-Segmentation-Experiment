@@ -17,8 +17,8 @@ print("Loading Data...")
 trainset = ImageData("./VOCdevkit/VOC2012/SegmentTrain", "./VOCdevkit/VOC2012/SegmentTrainLabels")
 valset = ImageData("./VOCdevkit/VOC2012/SegmentVal", "./VOCdevkit/VOC2012/SegmentValLabels")
 
-train_loader = data.DataLoader(trainset, batch_size=1, shuffle=True)
-val_loader = data.DataLoader(valset, batch_size=1, shuffle=True)
+train_loader = data.DataLoader(trainset, batch_size=4, shuffle=True)
+val_loader = data.DataLoader(valset, batch_size=4, shuffle=True)
 print("completed.")
 
 device = torch.device(0)
@@ -103,7 +103,7 @@ def train(net):
 
             label = label.squeeze(1)
             #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-            loss = jaccard_loss(label.type(torch.cuda.FloatTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
+            loss = jaccard_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
             loss.backward()
 
 
@@ -114,7 +114,7 @@ def train(net):
 
 
             loss_track += loss.item()
-            if data[0] % 20 == 1:
+            if data[0] % 10 == 1:
                 print("Epoch: %d    Training Loss: %.5f\n" % (epoch+1, loss_track))
                 wandb.log({"Training Loss": loss_track})
                 loss_track = 0.0
