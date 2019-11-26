@@ -10,7 +10,8 @@ class res_contract(nn.Module):
         self.in_channel = in_channel
         self.out_channel = out_channel
 
-        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
+        self.dropout = nn.Dropout2d(0.15)
 
         self.skip_conv = nn.Conv2d(self.in_channel, self.out_channel, 1, bias=False)
 
@@ -24,12 +25,15 @@ class res_contract(nn.Module):
 
         """
         r1 = self.skip_conv(x)
-        x = self.bn1(self.relu(self.conv1(x)))
+        x = self.bn1(self.tanh(self.conv1(x)))
         x = torch.add(x, r1)
         r2 = x.clone()
-        x = self.bn2(self.relu(self.conv2(x)))
+        x = self.dropout(x)
+        x = self.bn2(self.tanh(self.conv2(x)))
         x = torch.add(x, r2)
         skip = x.clone()
+        x = self.dropout(x)
+
 
         return x, skip
 
@@ -41,7 +45,8 @@ class res_expand(nn.Module):
         self.in_channel = in_channel
         self.out_channel = out_channel
 
-        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
+        self.dropout = nn.Dropout2d(0.15)
 
         self.skip_conv = nn.Conv2d(self.in_channel, self.out_channel, 1, bias=False)
 
@@ -55,12 +60,14 @@ class res_expand(nn.Module):
 
         """
         r1 = self.skip_conv(x)
-        x = self.bn1(self.relu(self.conv1(x)))
+        x = self.bn1(self.tanh(self.conv1(x)))
         x = torch.add(x, r1)
+        x = self.dropout(x)
         x = torch.cat((skip, x), dim=1)
         r2 = self.skip_conv(x)
-        x = self.bn2(self.relu(self.conv2(x)))
+        x = self.bn2(self.tanh(self.conv2(x)))
         x = torch.add(x, r2)
+        x = self.dropout(x)
 
         return x
 
@@ -88,7 +95,7 @@ class SegmentNet(nn.Module):
         self.expand4 = res_expand(128,64)
 
         self.conv10 = nn.Conv2d(64, 21, 1)
-        self.relu = nn.Tanh()
+        self.tanh = nn.Tanh()
         self.softmax = nn.Softmax2d()
 
 
@@ -121,7 +128,7 @@ class SegmentNet(nn.Module):
         x = self.expand3(x, skip2)
         x = self.upsample(x)
         x = self.expand4(x, skip1)
-        x = self.relu(self.conv10(x))
+        x = self.tanh(self.conv10(x))
         x = self.softmax(x)
 
         return x

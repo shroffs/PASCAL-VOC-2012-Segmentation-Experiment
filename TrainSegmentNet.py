@@ -27,7 +27,7 @@ device = torch.device(0)
 def net_init(model):
     classname = model.__class__.__name__
     if classname.find('Conv2d') != -1:
-        model.weight.data.uniform_(0.0, 1.0)
+        model.weight.data.uniform_(0.0, 0.05)
         if model.bias is not None:
             model.bias.data.fill_(0.0)
 
@@ -76,7 +76,7 @@ def jaccard_loss(true, logits, eps=1e-7):
 
 def train(net):
     print("Training Beginning")
-    optimizer = optim.RMSprop(net.parameters(), lr=0.01, momentum=0.9, eps=1e-4)
+    optimizer = optim.Adam(net.parameters(), lr=0.1, eps=1e-4)
     #optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.01, max_lr=0.1, step_size_up=20)
     #criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0])).cuda()
     for epoch in range(EPOCHS):
