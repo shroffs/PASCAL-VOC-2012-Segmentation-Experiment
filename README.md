@@ -9,7 +9,7 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
 
 1. Download the dataset to working directory
  ```
- wget http://host.robots.ox.ac.uk/pascal/VOC/voc2012/#devkit
+ wget http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
  ```
  2. Extract the dataset
  ```
