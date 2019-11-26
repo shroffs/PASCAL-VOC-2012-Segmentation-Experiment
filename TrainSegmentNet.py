@@ -103,7 +103,7 @@ def train(net):
 
             label = label.squeeze(1)
             #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-            loss = jaccard_loss(label.type(torch.cuda.FloatTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
+            loss = jaccard_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
             loss.backward()
 
 
