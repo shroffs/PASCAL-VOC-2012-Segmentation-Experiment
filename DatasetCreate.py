@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 import cv2
 from torch.utils.data import Dataset
 from torch import tensor
@@ -31,10 +32,11 @@ class ImageData(Dataset):
                         [128, 64, 0]]
         # These pixel values are linearly dependent so we use a dot product to make them distinct
         self.indep_classes = np.dot(self.classes, [1, 10, 100])
+        print(self.indep_classes)
         self.dictionary = dict(zip(self.indep_classes, range(21)))
 
     def class_enc(self, arr):
-        """ Takes 3xHxW label and encodes to 1xHxW
+        """ Takes HxWx3 label and encodes to 1xHxW
         """
         h, w = arr.shape[0], arr.shape[1]
         arr = np.dot(arr, [1, 10, 100])
@@ -48,6 +50,7 @@ class ImageData(Dataset):
                 except KeyError:
                     # The the pixel value does not belong to a class make it border class
                     res[i][j] = 0
+                    print(i, j, arr[i][j])
         return res
 
 
@@ -59,7 +62,6 @@ class ImageData(Dataset):
         img = self.imgfiles[idx]
         #read jpg
         img = cv2.imread(os.path.join(self.imgdir, img))
-        img = cv2.resize(img, (512,512))
         # swap axes for CxHxW array
         img = np.array(img)
         img = np.swapaxes(img, 2, 0)
@@ -68,7 +70,6 @@ class ImageData(Dataset):
         lab = self.labfiles[idx]
         # read image
         lab = cv2.imread(os.path.join(self.labdir, lab))
-        lab = cv2.resize(lab, (512, 512))
         # convert to numpy array
         lab = np.array(lab)
         # encode
@@ -77,3 +78,6 @@ class ImageData(Dataset):
         lab = np.swapaxes(lab, 2, 0)
 
         return img, lab
+
+
+

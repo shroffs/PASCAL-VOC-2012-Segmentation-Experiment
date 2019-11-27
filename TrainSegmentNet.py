@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader
 from SegmentNet import SegmentNet
 from DatasetCreate import ImageData
+from BabySegmentNet import BabySegmentNet
 import torch
 import torch.optim as optim
 import torch.utils.data as data
@@ -76,7 +77,7 @@ def jaccard_loss(true, logits, eps=1e-7):
 
 def train(net):
     print("Training Beginning")
-    optimizer = optim.Adam(net.parameters(), lr=0.1, eps=1e-4)
+    optimizer = optim.Adam(net.parameters(), lr=0.005, eps=1e-4)
     #optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.01, max_lr=0.1, step_size_up=20)
     #criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0])).cuda()
     for epoch in range(EPOCHS):
@@ -114,7 +115,9 @@ def train(net):
 
 
             loss_track += loss.item()
-            if data[0] % 10 == 1:
+            if data[0] % 10 == 0:
+                if data[0] == 0:
+                    pass
                 print("Epoch: %d    Training Loss: %.5f\n" % (epoch+1, loss_track))
                 wandb.log({"Training Loss": loss_track})
                 loss_track = 0.0
@@ -128,9 +131,9 @@ def train(net):
                 val_lab = val_lab.squeeze(1)
                 val_loss = jaccard_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
                 track_val_loss += val_loss
-        track_val_loss = track_val_loss/26.4
-        print("Validation Loss: %.5f\n" % track_val_loss)
-        wandb.log({"Validation Loss": track_val_loss})
+                if val[0] % 10 == 0:
+                    print("Validation Loss: %.5f\n" % track_val_loss)
+                    wandb.log({"Validation Loss": track_val_loss})
 
 
 train(net)

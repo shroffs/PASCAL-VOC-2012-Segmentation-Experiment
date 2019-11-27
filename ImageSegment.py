@@ -16,20 +16,18 @@ img_path = "C:\\Users\\Spencer\\Documents\\GitHub\\PASCAL-VOC-2012-Segmentation-
 img = cv2.imread(img_path, 1)
 
 
-def encode_image(img): #any image HxWxC
-    img = cv2.resize(img, (512,512))
-    img = np.swapaxes(img,0,2)
+def encode_image(img): #any image HxWx3
+    img = np.swapaxes(img, 0, 2)
     img = torch.tensor(img).type(torch.cuda.FloatTensor)
     img = img.unsqueeze_(0)
     return img
 
-def decode_image(label): #21x512x512
-    res = np.zeros((512,512,3))
+def decode_image(label): #1x512x512
+    label = np.swapaxes(label, 0, 2)
+    h,w,c = label.shape
+    res = np.zeros((h, w, 3))
     label = label.to('cpu').detach().numpy()
     label = np.squeeze(label, 0)
-    label = np.swapaxes(label, 0,2)
-
-    print(label)
 
     classes = [[192, 224, 224], [0, 0, 0], [0, 0, 128],
                [0, 128, 0], [0, 128, 128], [128, 0, 0],
