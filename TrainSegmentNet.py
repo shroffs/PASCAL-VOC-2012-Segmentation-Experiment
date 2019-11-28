@@ -41,18 +41,6 @@ print("completed")
 EPOCHS = 1
 
 def jaccard_loss(true, logits, eps=1e-7):
-    """Computes the Jaccard loss, a.k.a the IoU loss.
-    Note that PyTorch optimizers minimize a loss. In this
-    case, we would like to maximize the jaccard loss so we
-    return the negated jaccard loss.
-    Args:
-        true: a tensor of shape [B, H, W] or [B, 1, H, W].
-        logits: a tensor of shape [B, C, H, W]. Corresponds to
-            the raw output or logits of the model.
-        eps: added to the denominator for numerical stability.
-    Returns:
-        jacc_loss: the Jaccard loss.
-    """
     num_classes = logits.shape[1]
     if num_classes == 1:
         true_1_hot = torch.eye(num_classes + 1)[true.squeeze(1)]
@@ -78,8 +66,7 @@ def jaccard_loss(true, logits, eps=1e-7):
 def train(net):
     print("Training Beginning")
     optimizer = optim.Adam(net.parameters(), lr=0.005, eps=1e-4)
-    #optim.lr_scheduler.CyclicLR(optimizer, base_lr=0.01, max_lr=0.1, step_size_up=20)
-    #criterion = nn.CrossEntropyLoss(weight=tensor([1.0,1.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0])).cuda()
+
     for epoch in range(EPOCHS):
         loss_track = 0.0
         for data in enumerate(tqdm(train_loader)):
@@ -107,15 +94,10 @@ def train(net):
             loss = jaccard_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
             loss.backward()
 
-
-            #clip = 1
-            #torch.nn.utils.clip_grad_norm_(net.parameters(), clip)
             optimizer.step()
 
-
-
             loss_track += loss.item()
-            if data[0] % 10 == 0:
+            if data[0] % 5 == 0:
                 if data[0] == 0:
                     pass
                 print("Epoch: %d    Training Loss: %.5f\n" % (epoch+1, loss_track))

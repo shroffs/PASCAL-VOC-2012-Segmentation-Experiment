@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+import torchvision
 
 
 class res_contract(nn.Module):
@@ -77,10 +78,10 @@ class SegmentNet(nn.Module):
 
         super(SegmentNet, self).__init__()
 
-        self.norm = nn.InstanceNorm2dNorm(3, eps=1e-5)
+        self.norm = nn.InstanceNorm2d(3, eps=1e-5)
 
         # Contracting
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool = nn.MaxPool2d((2, 2), ceil_mode=True)
         self.contract1 = res_contract(3, 64)
         self.contract2 = res_contract(64, 128)
         self.contract3 = res_contract(128, 256)
@@ -106,6 +107,7 @@ class SegmentNet(nn.Module):
         Returns:
             x: 1xHxW array of predictions
         """
+
         x = self.norm(x)             # 3x512x512 -> 3x512x512
 
         x, skip1 = self.contract1(x) # 3x512x512 -> 64x512x512 (1)
@@ -129,9 +131,3 @@ class SegmentNet(nn.Module):
         x = self.conv10(x)           # 64x512x512 -> 21x512x512
 
         return x
-
-
-
-
-
-
