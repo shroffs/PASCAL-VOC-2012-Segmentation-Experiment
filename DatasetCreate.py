@@ -59,7 +59,7 @@ class ImageData(Dataset):
         img = self.imgfiles[idx]
         #read jpg
         img = cv2.imread(os.path.join(self.imgdir, img))
-        img = cv2.resize(img, (512,512), interpolation=cv2.INTER_NEAREST)
+        img = cv2.resize(img, (256,256), interpolation=cv2.INTER_NEAREST)
         # swap axes for CxHxW array
         img = np.array(img)
         img = np.swapaxes(img, 1, 2)
@@ -70,7 +70,7 @@ class ImageData(Dataset):
         lab = self.labfiles[idx]
         # read image
         lab = cv2.imread(os.path.join(self.labdir, lab))
-        lab = cv2.resize(lab, (512, 512), interpolation=cv2.INTER_NEAREST)
+        lab = cv2.resize(lab, (256, 256), interpolation=cv2.INTER_NEAREST)
         # convert to numpy array
         lab = np.array(lab)
         # encode
