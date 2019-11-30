@@ -1,12 +1,13 @@
 from SegmentNet import SegmentNet
 from DatasetCreate import ImageData
-from JaccardLoss import jaccard_loss
+from TverskyLoss import tversky_loss
 import torch
 import torch.optim as optim
 import torch.utils.data as data
 import torch.nn as nn
 import sys
 from tqdm import tqdm
+from torchvision.transforms import RandomCrop
 import wandb
 
 wandb.init(project="segmentation-net")
@@ -41,8 +42,7 @@ EPOCHS = 1
 def train(net):
     print("Training Beginning")
     optimizer = optim.RMSprop(net.parameters(), lr=0.00025, momentum=0.9, weight_decay=0.0005)
-    weights = torch.ones(21)
-    criterion = nn.CrossEntropyLoss(weight=weights, reduction='sum')
+    criterion = nn.CrossEntropyLoss()
     for epoch in range(EPOCHS):
         loss_track = 0.0
         for data in enumerate(tqdm(train_loader)):
@@ -66,8 +66,9 @@ def train(net):
                     raise e
 
             label = label.squeeze(1)
-            jacc = jaccard_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
-            loss = jacc + criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.int64))
+            t_loss = tversky_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=1, beta=0.5)
+            ce_loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
+            loss = ce_loss.add(t_loss)
             loss.backward()
 
             optimizer.step()
@@ -80,21 +81,20 @@ def train(net):
 
         print("Running Validation...")
         track_val_loss = 0.0
-        track_val_acc = 0.0
         with torch.no_grad():
             for val in enumerate(tqdm(val_loader)):
                 val_img, val_lab = val[1][0].type(torch.cuda.FloatTensor), val[1][1].type(torch.cuda.FloatTensor)
                 output_label = net(val_img)
                 val_lab = val_lab.squeeze(1)
-                val_loss = jaccard_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4)
-                val_acc = ((val_loss)-1)*-1
-                track_val_acc += val_acc/BATCH_SIZE
+                t_loss = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=1, beta=0.5)
+                ce_loss = criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
+                val_loss = ce_loss.add(t_loss)
                 track_val_loss += val_loss/BATCH_SIZE
                 if val[0] % 10 == 0:
-                    wandb.log({"Val Acc": track_val_acc, "Val Jaccard Loss": track_val_loss})
-                    print("   Validation Acc: %.5f    Validation Jaccard Loss: %.5f\n" % (track_val_acc, track_val_loss))
+                    wandb.log({"Val Loss": track_val_loss})
+                    print("  Validation Loss: %.5f\n" % track_val_loss)
                     track_val_loss = 0.0
-                    track_val_acc = 0.0
+
 
 
 train(net)

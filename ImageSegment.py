@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 from SegmentNet import SegmentNet
 import torch
@@ -11,12 +12,12 @@ np.set_printoptions(threshold=sys.maxsize)
 device = torch.device(0)
 
 #Load in net and parameters
-net_state_dict = ".\\TrainedNet4"
+net_state_dict = ".\\TrainedNetT1"
 net = SegmentNet().type(torch.cuda.FloatTensor)
 net.load_state_dict(torch.load(net_state_dict))
 net.eval()
 
-img_path = "C:\\Users\\Spencer\\Documents\\GitHub\\PASCAL-VOC-2012-Segmentation-Experiement\\VOCdevkit\\VOC2012\\JPEGImages\\2007_000032.jpg"
+img_path = "C:\\Users\\Spencer\\Documents\\GitHub\\PASCAL-VOC-2012-Segmentation-Experiement\\VOCdevkit\\VOC2012\\JPEGImages\\2007_002370.jpg"
 img = cv2.imread(img_path, 1)
 
 
@@ -36,7 +37,7 @@ def decode_image(label): #1x512x512
     label = np.swapaxes(label, 0, 1)
     label = np.swapaxes(label, 1, 2)
     h,w,c = label.shape
-    res = np.zeros((h, w, 3))
+    res = np.zeros((h, w, 3), dtype=int)
     classes = [[0, 0, 0], [0, 0, 128], [0, 128, 0], [0, 128, 128],
                     [128, 0, 0], [128, 0, 128], [128, 128, 0], [128, 128, 128], [0, 0, 64],
                     [0, 0, 192], [0, 128, 64], [0, 128, 192], [128, 0, 64], [128, 0, 192],
@@ -45,16 +46,17 @@ def decode_image(label): #1x512x512
 
     for i in range(len(label)):
         for j in range(len(label[i])):
-            res[i][j] = classes[np.argmax(scsp.softmax(label[i][j]))]
+            res[i][j] = classes[np.argmax(label[i][j])]
     return res
 
 
 
+cv2.imshow('img', img)
+cv2.waitKey(0)
 img_enc = encode_image(img)
 label = net(img_enc)
 res = decode_image(label)
-cv2.imshow('seg', res)
-cv2.imshow('img', img)
-cv2.waitKey(0)
+plt.imshow(res)
+plt.show()
 
 

@@ -4,7 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 from torch.utils.data import Dataset
-from torch import tensor
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+
+
+np.set_printoptions(threshold=sys.maxsize)
 
 img_path_train = "./VOCdevkit/VOC2012/SegmentTrain"
 img_path_val = "./VOCdevkit/VOC2012/SegmentVal"
@@ -26,11 +30,11 @@ class ImageData(Dataset):
         self.classes = [[0, 0, 0],[192, 224, 224],[0, 0, 128],[0, 128, 0],[0, 128, 128],
                         [128, 0, 0], [128, 0, 128], [128, 128, 0], [128, 128, 128], [0, 0, 64],
                         [0, 0, 192], [0, 128, 64], [0, 128, 192], [128, 0, 64], [128, 0, 192],
-                        [128, 128, 64],  [128, 128, 192], [0, 64, 0], [0, 64, 128], [0, 192, 0] ,
+                        [128, 128, 64],  [128, 128, 192], [0, 64, 0], [0, 64, 128], [0, 192, 0],
                         [0, 192, 128], [128, 64, 0]]
         # These pixel values are linearly dependent so we use a dot product to make them distinct
         self.indep_classes = np.dot(self.classes, [1, 10, 100])
-        self.dictionary = dict(zip(self.indep_classes, [0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21]))
+        self.dictionary = dict(zip(self.indep_classes, [0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]))
 
     def class_enc(self, arr):
         """ Takes HxWx3 label and encodes to 1xHxW
@@ -46,8 +50,8 @@ class ImageData(Dataset):
                     res[i][j] = self.dictionary[arr[i][j]]
                 except KeyError:
                     # The the pixel value does not belong to a class make it border class
-                    res[i][j] = 0
-                    print(i, j, arr[i][j])
+                    #print(i, j, arr[i][j])
+                    pass
         return res
 
 
@@ -57,26 +61,40 @@ class ImageData(Dataset):
     def __getitem__(self, idx):
 
         img = self.imgfiles[idx]
-        #read jpg
         img = cv2.imread(os.path.join(self.imgdir, img))
-        img = cv2.resize(img, (256,256), interpolation=cv2.INTER_NEAREST)
-        # swap axes for CxHxW array
-        img = np.array(img)
-        img = np.swapaxes(img, 1, 2)
-        img = np.swapaxes(img, 0, 1)
-
-
 
         lab = self.labfiles[idx]
-        # read image
         lab = cv2.imread(os.path.join(self.labdir, lab))
-        lab = cv2.resize(lab, (256, 256), interpolation=cv2.INTER_NEAREST)
-        # convert to numpy array
-        lab = np.array(lab)
-        # encode
+
+        #apply same random crop to label and image
+        img, lab = np.array(img), np.array(lab)
+        both = np.concatenate((img,lab), axis=2)
+        both = tf.image.random_crop(both, (256,256,6))
+        both = np.array(both)
+        img, lab = np.dsplit(both, 2)
+
+        #normalize
+        img = img/255
+        #make CxHxW
+        img = np.swapaxes(img, 2, 1)
+        img = np.swapaxes(img, 1, 0)
+
+        #encode classes
         lab = self.class_enc(lab)
-        # swap axis for CxHxW array
-        lab = np.swapaxes(lab, 1, 2)
-        lab = np.swapaxes(lab, 0, 1)
+        #make CxHxW
+        lab = np.swapaxes(lab, 2, 1)
+        lab = np.swapaxes(lab, 1, 0)
+
+
 
         return img, lab
+
+data = ImageData(img_path_train, label_path_train)
+d = data[0]
+f = plt.figure()
+f.add_subplot(1,2,1)
+plt.imshow(d[0][0])
+f.add_subplot(1,2,2)
+plt.imshow(d[1][0])
+plt.show()
+
