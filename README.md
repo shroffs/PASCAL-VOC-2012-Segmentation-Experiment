@@ -50,8 +50,7 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  ___
  ### Possible Improvements
  * The first improvement I would choose to make is dynamic resizing.
- * There could possible exist a better way to encode and decode masks that is not interating through all pixels
+ * There could possibly exist a better way to encode and decode masks that is not iterating through all pixels
  * It seems possible to make a UNet like architecture work on arbitrary image size. Its just difficult to implement in a clean way.
- * Dataset augementation could have been used if I was serious about making a high-accuracy model.
- * Picking a good loss function was difficult. Ultimately used weighted sum of Jaccard and Cross Entropy Loss.
+ * Picking a good loss function was difficult. Ultimately used sum of Tversky and Cross Entropy Loss.
  
