@@ -2,10 +2,10 @@
 Using a FCN/Unet style network to segment images.  [PASCAL VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/) segementation dataset used as training data.
 ____
 ### The Purpose: Larger Networks and Cloud GPUs
-The initial purpose of this was to exercise making larger more complex networks than plain old CNNs I have made in the past. As a bonus it turns out my GPU did not have the RAM to handle such a network and the training that comes with it... meaning I had to step into the world of cloud GPUs.
+The initial purpose of this was to exercise making larger more complex networks than plain old CNNs I have made in the past. As a bonus it turns out my GPU did not have the RAM to handle such a network and the training that comes with it... meaning I had to make use of cloud GPUs.
 ___
 ### The Scripts
-The code was initially intended to run locally, meaning i/o was sloppy and runtime was a matter of patients. When I realized I would have to use a cloud GPU, I made the code more modular in a way that made more sense and saved more time. The order this were intended to run looks like this.
+The code was initially intended to run locally, meaning i/o was sloppy and runtime was a matter of patients. When I realized I would have to use a cloud GPU, I made the code more modular in a way that made more sense and saved more time. The order this is intended to run looks like this.
 
 1. Download the dataset to working directory
  ```
@@ -50,8 +50,7 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  ___
  ### Possible Improvements
  * The first improvement I would choose to make is dynamic resizing.
- * There could possible exist a better way to encode and decode masks that is not interating through all pixels
+ * There could possibly exist a better way to encode and decode masks that is not iterating through all pixels
  * It seems possible to make a UNet like architecture work on arbitrary image size. Its just difficult to implement in a clean way.
- * Dataset augementation could have been used if I was serious about making a high-accuracy model.
- * Picking a good loss function was difficult. Ultimately used weighted sum of Jaccard and Cross Entropy Loss.
+ * Picking a good loss function was difficult. Ultimately used sum of Tversky and Cross Entropy Loss.
  
