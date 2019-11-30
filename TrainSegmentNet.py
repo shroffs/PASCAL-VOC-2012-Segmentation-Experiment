@@ -81,6 +81,7 @@ def train(net):
 
         print("Running Validation...")
         track_val_loss = 0.0
+        acc_track = 0.0
         with torch.no_grad():
             for val in enumerate(tqdm(val_loader)):
                 val_img, val_lab = val[1][0].type(torch.cuda.FloatTensor), val[1][1].type(torch.cuda.FloatTensor)
@@ -89,11 +90,14 @@ def train(net):
                 t_loss = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=1, beta=0.5)
                 ce_loss = criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
                 val_loss = ce_loss.add(t_loss)
+                acc = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)
                 track_val_loss += val_loss/BATCH_SIZE
+                acc_track += acc/BATCH_SIZE
                 if val[0] % 10 == 0:
-                    wandb.log({"Val Loss": track_val_loss})
+                    wandb.log({"Val Loss": track_val_loss, "Val Acc": acc_track})
                     print("  Validation Loss: %.5f\n" % track_val_loss)
                     track_val_loss = 0.0
+                    acc_track = 0.0
 
 
 
