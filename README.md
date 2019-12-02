@@ -1,11 +1,11 @@
 # Image Segmentation Experiementation on PASCAL-VOC-2012
-Using a FCN/Unet style network to segment images.  [PASCAL VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/) segementation dataset used as training data.
+Using a Unet network to segment images.  [PASCAL VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/) segementation dataset used as training data.Transfer Learned from [VGG](https://arxiv.org/abs/1409.1556)
 ____
-### The Purpose: Larger Networks and Cloud GPUs
-The initial purpose of this was to exercise making larger more complex networks than plain old CNNs I have made in the past. As a bonus it turns out my GPU did not have the RAM to handle such a network and the training that comes with it... meaning I had to make use of cloud GPUs.
+### The Purpose: Larger Networks, Transfer Learning, and Cloud GPUs
+The initial purpose of this was to exercise making larger more complex networks than plain old CNNs I have made in the past. As a bonus it turns out my GPU did not have the RAM to handle such a network and the training that comes with it... meaning I had to make use of cloud GPUs. Also, FCNs will not train from scratch, making transfer learning a necisity.
 ___
 ### The Scripts
-The code was initially intended to run locally, meaning i/o was sloppy and runtime was a matter of patients. When I realized I would have to use a cloud GPU, I made the code more modular in a way that made more sense and saved more time. The order this is intended to run looks like this.
+The code was initially intended to run locally, meaning i/o was sloppy and runtime was a horrible. When I realized I would have to use a cloud GPU, I made the code more modular in a way that made more sense and saved more time. The following is the order this is intended to run:
 
 1. Download the dataset to working directory
  ```
@@ -19,14 +19,17 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  ```
  python3 DataSeparate.py
  ```
- 4. DatasetCreate.py and SegmentNet.py are just classes that are called in actuall training script
+ 4. DatasetCreate.py is just a class but SegementNet.py should be run because it downloads the pre-trained VGG to wd.
+ ```
+ python3 SegmentNet.py
+ ```
  5. Train the model
  ```
  python3 TrainSegmentNet.py
  ```
  ___
  ### Network Architecture
- The architecture I chose for this task is a Fully-Convolutional Network with UNet skip connections and residual layers. This architecture was mainly choosen to be adventurous and explore the pytorch library but if it performs have decently that would be great as well. In the spirit of being adventurous, we also use [Jaccard Loss](https://github.com/kevinzakka/pytorch-goodies/blob/master/losses.py).
+ The architecture I chose for this task is a Fully-Convolutional Network with UNet skip connections a.k.a Unet. This architecture was mainly choosen to be adventurous and explore the pytorch library but if it performs have decently that would be great as well. In the spirit of being adventurous, we also use a sum of [Tversky Loss](https://github.com/kevinzakka/pytorch-goodies/blob/master/losses.py) and Cross Entropy.
  ![Flowchart Architecture](SegmentNet_flat.png)
  ![3DFlowchart](3DSegmentNet.png)
  
@@ -45,8 +48,9 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  11. scp trained model to local machine
  ___
  ### Training
- * resized all images to 512x512 so batch size is restricted to one for GPU memory's sake. I will highly consider resizing to 256x256 instead since I will free up GPU memory and sigficicant decrease size and increase speed of the network. 
- * track losses with W and B. (we'll see if this works)
+ * All images are randomly cropped to 256x256 before input.
+ * All parameter will train immediately. As an alternative, I could freeze the VGG part of the network and only let the Upsampling half train for a bit before freeing the entire model.
+ * Track losses with W and B.
  ___
  ### Possible Improvements
  * The first improvement I would choose to make is dynamic resizing.
