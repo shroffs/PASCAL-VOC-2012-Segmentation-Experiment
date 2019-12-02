@@ -30,8 +30,8 @@ The code was initially intended to run locally, meaning i/o was sloppy and runti
  ___
  ### Network Architecture
  The architecture I chose for this task is a Fully-Convolutional Network with UNet skip connections a.k.a Unet. This architecture was mainly choosen to be adventurous and explore the pytorch library but if it performs have decently that would be great as well. In the spirit of being adventurous, we also use a sum of [Tversky Loss](https://github.com/kevinzakka/pytorch-goodies/blob/master/losses.py) and Cross Entropy.
+ ![Netconfiguration](SegmentNet-Congif.png)
  ![3DFlowchart](3DSegmentNet.png)
- 
  ___
  ### Cloud GPUs
  I chose to use Linode. We create a CPU server to get data ready and a GPU server to actually train on. The plan goes like so:
