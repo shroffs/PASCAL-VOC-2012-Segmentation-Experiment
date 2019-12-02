@@ -6,8 +6,8 @@ import torch.optim as optim
 import torch.utils.data as data
 import torch.nn as nn
 import sys
+import os
 from tqdm import tqdm
-from torchvision.transforms import RandomCrop
 import wandb
 
 wandb.init(project="segmentation-net")
@@ -24,16 +24,20 @@ print("completed.")
 
 device = torch.device(0)
 
+PATH = "./"
+VGG_PATH = os.path.join(PATH,"vgg16_bn-6c64b313.pth")
+
 def net_init(model):
     classname = model.__class__.__name__
     if classname.find('Conv2d') != -1:
-        model.weight.data.uniform_(0.0, 0.05)
+        model.weight.data.uniform_(0.0, 0.1)
         if model.bias is not None:
             model.bias.data.fill_(0.0)
 
 print("Initializing Network...")
 net = SegmentNet().type(torch.cuda.FloatTensor).cuda()
 net.apply(net_init)
+net.load_state_dict(torch.load(VGG_PATH), strict=False)
 wandb.watch(net)
 print("completed")
 
@@ -41,7 +45,7 @@ EPOCHS = 1
 
 def train(net):
     print("Training Beginning")
-    optimizer = optim.RMSprop(net.parameters(), lr=0.00025, momentum=0.9, weight_decay=0.0005)
+    optimizer = optim.RMSprop(net.parameters(), lr=5e-5, momentum=0.9, weight_decay=0.0005)
     criterion = nn.CrossEntropyLoss()
     for epoch in range(EPOCHS):
         loss_track = 0.0
@@ -66,8 +70,8 @@ def train(net):
                     raise e
 
             label = label.squeeze(1)
-            t_loss = tversky_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=1, beta=0.5)
-            ce_loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
+            t_loss = tversky_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.05, beta=2)
+            ce_loss = 0.1*criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
             loss = ce_loss.add(t_loss)
             loss.backward()
 
@@ -87,10 +91,10 @@ def train(net):
                 val_img, val_lab = val[1][0].type(torch.cuda.FloatTensor), val[1][1].type(torch.cuda.FloatTensor)
                 output_label = net(val_img)
                 val_lab = val_lab.squeeze(1)
-                t_loss = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=1, beta=0.5)
-                ce_loss = criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
+                t_loss = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.05, beta=2)
+                ce_loss = 0.1*criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
                 val_loss = ce_loss.add(t_loss)
-                acc = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)
+                acc = (tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)-1)*-1
                 track_val_loss += val_loss/BATCH_SIZE
                 acc_track += acc/BATCH_SIZE
                 if val[0] % 10 == 0:
@@ -98,8 +102,6 @@ def train(net):
                     print("  Validation Loss: %.5f\n" % track_val_loss)
                     track_val_loss = 0.0
                     acc_track = 0.0
-
-
 
 train(net)
 #16:14 min/epoch

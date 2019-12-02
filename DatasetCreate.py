@@ -5,6 +5,8 @@ import random
 import matplotlib.pyplot as plt
 import cv2
 from torch.utils.data import Dataset
+from torchvision.transforms import Normalize
+import torch.tensor as tensor
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
@@ -76,14 +78,19 @@ class ImageData(Dataset):
         both = np.array(both)
         img, lab = np.dsplit(both, 2)
 
-        #normalize
-        img = img/255
         #make CxHxW
         img = np.swapaxes(img, 2, 1)
         img = np.swapaxes(img, 1, 0)
+        
+        #normalize
+        img = img/255
+        img = tensor(img)
+        normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        img = normalize(img)
 
         #encode classes
         lab = self.class_enc(lab)
+
         #make CxHxW
         lab = np.swapaxes(lab, 2, 1)
         lab = np.swapaxes(lab, 1, 0)
@@ -92,7 +99,7 @@ class ImageData(Dataset):
 
         return img, lab
 
-
+"""
 data = ImageData(img_path_train, label_path_train)
 d = data[1490]
 f = plt.figure()
@@ -101,5 +108,6 @@ plt.imshow(d[0][0])
 f.add_subplot(1,2,2)
 plt.imshow(d[1][0])
 plt.show()
+"""
 
 
