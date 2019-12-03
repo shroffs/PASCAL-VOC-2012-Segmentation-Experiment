@@ -73,8 +73,14 @@ class ImageData(Dataset):
         img, lab = np.array(img), np.array(lab)
         both = np.concatenate((img,lab), axis=2)
         both = tf.image.random_crop(both, (256,256,6))
-        both = np.array(both)
-        img, lab = np.dsplit(both, 2)
+
+        with tf.compat.v1.Session() as sess:
+            both = both.eval()
+            sess.close()
+            del sess
+
+        #both = both.numpy()
+        img, lab = np.split(both, 2, axis=2)
 
         #make CxHxW
         img = np.swapaxes(img, 2, 1)
@@ -97,7 +103,7 @@ class ImageData(Dataset):
 
         return img, lab
 
-
+"""
 data = ImageData(img_path_train, label_path_train)
 d = data[550]
 f = plt.figure()
@@ -106,5 +112,5 @@ plt.imshow(d[0][0])
 f.add_subplot(1,2,2)
 plt.imshow(d[1][0])
 plt.show()
-
+"""
 

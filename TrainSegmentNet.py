@@ -5,7 +5,6 @@ import torch
 import torch.optim as optim
 import torch.utils.data as data
 import torch.nn as nn
-import sys
 import os
 from tqdm import tqdm
 import wandb
@@ -22,11 +21,12 @@ train_loader = data.DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = data.DataLoader(valset, batch_size=BATCH_SIZE, shuffle=True)
 print("completed.")
 
-device = torch.device(0)
+device = torch.device('cuda:0')
 
 PATH = "./"
 VGG_PATH = os.path.join(PATH,"vgg16_bn-6c64b313.pth")
 
+print("Initializing Network...")
 def net_init(model):
     classname = model.__class__.__name__
     if classname.find('Conv2d') != -1:
@@ -34,8 +34,7 @@ def net_init(model):
         if model.bias is not None:
             model.bias.data.fill_(0.0)
 
-print("Initializing Network...")
-net = SegmentNet().type(torch.cuda.FloatTensor).cuda()
+net = SegmentNet().type(torch.cuda.FloatTensor)
 net.apply(net_init)
 net.load_state_dict(torch.load(VGG_PATH), strict=False)
 wandb.watch(net)
@@ -44,64 +43,60 @@ print("completed")
 EPOCHS = 1
 
 def train(net):
+    net.train()
     print("Training Beginning")
-    optimizer = optim.RMSprop(net.parameters(), lr=5e-5, momentum=0.9, weight_decay=0.0005)
-    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=5e-5, momentum=0.99, weight_decay=0.0005)
+    criterion = nn.CrossEntropyLoss().cuda()
     for epoch in range(EPOCHS):
-        loss_track = 0.0
-        for data in enumerate(tqdm(train_loader)):
-            X, label = data[1][0].type(torch.cuda.FloatTensor), data[1][1].type(torch.cuda.FloatTensor)
+        running_loss = 0.0
+        for i, (x, y) in enumerate(tqdm(train_loader)):
+
+            X, label = x.type(torch.cuda.FloatTensor), y.type(torch.cuda.FloatTensor)
             
             optimizer.zero_grad()
 
-            #small GPU: only 3GiB :( Cloud GPU :)
-            try:
-                output_label = net(X)
-            except RuntimeError as e:
-                if 'out of memory' in str(e):
-                    print("No more memory: retrying", sys.stdout)
-                    sys.stdout.flush()
-                    for p in net.parameters():
-                        if p.grad is not None:
-                            del p.grad
-                    torch.cuda.empty_cache()
-                    output_label = net(X)
-                else:
-                    raise e
+            output_label = net(X)
 
             label = label.squeeze(1)
             t_loss = tversky_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.05, beta=2)
             ce_loss = 0.1*criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
             loss = ce_loss.add(t_loss)
-            loss.backward()
 
+            loss.backward()
             optimizer.step()
 
-            loss_track += loss.item()/BATCH_SIZE
-            if data[0] % 5 == 0:
-                print("Epoch: %d    Training Loss: %.5f\n" % (epoch+1, loss_track))
-                wandb.log({"Training Loss": loss_track})
-                loss_track = 0.0
+            running_loss += loss.item()
+            if i % 5 == 4:
+                print("Epoch: %d    Training Loss: %.5f\n" % (epoch+1, running_loss/5))
+                wandb.log({"Training Loss": running_loss/5})
+                running_loss = 0.0
+                torch.cuda.empty_cache()
 
         print("Running Validation...")
-        track_val_loss = 0.0
-        acc_track = 0.0
+        running_val_loss = 0.0
+        running_val_acc = 0.0
         with torch.no_grad():
-            for val in enumerate(tqdm(val_loader)):
-                val_img, val_lab = val[1][0].type(torch.cuda.FloatTensor), val[1][1].type(torch.cuda.FloatTensor)
+            for i, (x, y) in enumerate(tqdm(val_loader)):
+
+                val_img, val_lab = x.type(torch.cuda.FloatTensor), y.type(torch.cuda.FloatTensor)
                 output_label = net(val_img)
                 val_lab = val_lab.squeeze(1)
+
                 t_loss = tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.05, beta=2)
                 ce_loss = 0.1*criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
                 val_loss = ce_loss.add(t_loss)
+
                 acc = (tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)-1)*-1
-                track_val_loss += val_loss/BATCH_SIZE
-                acc_track += acc/BATCH_SIZE
-                if val[0] % 10 == 0:
-                    wandb.log({"Val Loss": track_val_loss, "Val Acc": acc_track})
-                    print("  Validation Loss: %.5f\n" % track_val_loss)
-                    track_val_loss = 0.0
-                    acc_track = 0.0
+
+                running_val_acc += val_loss.item()
+                running_val_acc += acc
+                if i % 5 == 4:
+                    wandb.log({"Val Loss": running_val_loss/5, "Val Acc": running_val_acc/5})
+                    print("  Validation Loss: %.5f     Validation Acc: %.5f\n" % (running_val_loss, running_val_acc))
+                    running_val_loss = 0.0
+                    running_val_acc = 0.0
+                    torch.cuda.empty_cache()
+
 
 train(net)
 #16:14 min/epoch

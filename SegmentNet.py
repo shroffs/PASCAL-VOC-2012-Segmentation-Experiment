@@ -103,18 +103,43 @@ class expand(nn.Module):
         self.conv2 = nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
         self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
-    def forward(self, x, skip=None, no_skip = False):
+    def forward(self, x, skip=None):
         """Residual connection between all sequential conv layers and takes in skip from contracting layer of same size
 
         """
-        if not no_skip:
-            x = torch.cat((skip, x), dim=1)
+
+        x = torch.cat((skip, x), dim=1)
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
         x = self.dropout(x)
 
         return x
 
+class expand_1(nn.Module):
+
+    def __init__(self, in_channel, out_channel):
+        super(expand_1, self).__init__()
+
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout2d(0.1)
+
+        self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
+        self.conv2 = nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
+        self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
+
+    def forward(self, x):
+        """Residual connection between all sequential conv layers and takes in skip from contracting layer of same size
+
+        """
+        x = self.bn1(self.relu(self.conv1(x)))
+        x = self.bn2(self.relu(self.conv2(x)))
+        x = self.dropout(x)
+
+        return x
 
 class SegmentNet(nn.Module):
 
@@ -134,7 +159,7 @@ class SegmentNet(nn.Module):
 
         # Expanding
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-        self.expand1 = expand(4096, 512)
+        self.expand1 = expand_1(4096, 512)
         self.expand2 = expand(512, 512)
         self.expand3 = expand(512, 256)
         self.expand4 = expand(256, 128)
@@ -166,7 +191,7 @@ class SegmentNet(nn.Module):
         x = self.bottleneck(x)
 
         x = self.upsample(x)
-        x = self.expand1(x, no_skip=True)
+        x = self.expand1(x)
         x = self.upsample(x)
         x = self.expand2(x, skip4)
         x = self.upsample(x)
