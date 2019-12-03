@@ -101,9 +101,6 @@ def train(net):
                     running_val_acc = 0.0
                     torch.cuda.empty_cache()
 
-
-
-
 train(net)
 #16:14 min/epoch
 
