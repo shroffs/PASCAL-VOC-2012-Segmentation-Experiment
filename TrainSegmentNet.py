@@ -40,19 +40,23 @@ net.load_state_dict(torch.load(VGG_PATH), strict=False)
 wandb.watch(net)
 print("completed")
 
-EPOCHS = 1
+EPOCHS = 50
 
 def train(net):
-    net.train()
+
     print("Training Beginning")
     optimizer = optim.SGD(net.parameters(), lr=5e-5, momentum=0.99, weight_decay=0.0005)
     criterion = nn.CrossEntropyLoss().cuda()
+
     for epoch in range(EPOCHS):
+
+        print("Training...")
+        net.train()
         running_loss = 0.0
         for i, (x, y) in enumerate(tqdm(train_loader)):
 
             X, label = x.type(torch.cuda.FloatTensor), y.type(torch.cuda.FloatTensor)
-            
+
             optimizer.zero_grad()
 
             output_label = net(X)
@@ -73,9 +77,9 @@ def train(net):
                 torch.cuda.empty_cache()
 
         print("Running Validation...")
-        running_val_loss = 0.0
-        running_val_acc = 0.0
         with torch.no_grad():
+            running_val_loss = 0.0
+            running_val_acc = 0.0
             for i, (x, y) in enumerate(tqdm(val_loader)):
 
                 val_img, val_lab = x.type(torch.cuda.FloatTensor), y.type(torch.cuda.FloatTensor)
@@ -88,7 +92,7 @@ def train(net):
 
                 acc = (tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)-1)*-1
 
-                running_val_acc += val_loss.item()
+                running_val_loss += val_loss.item()
                 running_val_acc += acc
                 if i % 5 == 4:
                     wandb.log({"Val Loss": running_val_loss/5, "Val Acc": running_val_acc/5})
@@ -96,6 +100,8 @@ def train(net):
                     running_val_loss = 0.0
                     running_val_acc = 0.0
                     torch.cuda.empty_cache()
+
+
 
 
 train(net)
