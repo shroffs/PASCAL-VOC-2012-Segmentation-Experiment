@@ -45,7 +45,7 @@ EPOCHS = 50
 def train(net):
 
     print("Training Beginning")
-    optimizer = optim.SGD(net.parameters(), lr=5e-5, momentum=0.99, weight_decay=0.0005)
+    optimizer = optim.RMSProp(net.parameters(), lr=5e-5, momentum=0.99, weight_decay=0.0005)
     criterion = nn.CrossEntropyLoss().cuda()
 
     for epoch in range(EPOCHS):

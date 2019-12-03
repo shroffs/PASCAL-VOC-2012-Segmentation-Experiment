@@ -75,7 +75,7 @@ class ImageData(Dataset):
         lab = cv2.imread(os.path.join(self.labdir, img[:-4] + ".png"))
         img = cv2.imread(os.path.join(self.imgdir, img))
 
-        if img.shape[0] < 256 or img.shape[1] < 256 or img.shape != lab.shape:
+        if img.shape[0] < 256 or img.shape[1] < 256 or lab is None:
             # if a 256x256 cant be made, select a different random image from the dataset
             rand = random.randint(0, len(os.listdir(self.imgdir)) - 1)
             return self[rand]
