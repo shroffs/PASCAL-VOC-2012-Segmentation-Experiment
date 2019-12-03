@@ -61,15 +61,13 @@ class ImageData(Dataset):
     def __getitem__(self, idx):
 
         img = self.imgfiles[idx]
+        lab = cv2.imread(os.path.join(self.labdir, img[:-4]+".png"))
         img = cv2.imread(os.path.join(self.imgdir, img))
 
         if img.shape[0] < 256 or img.shape[1] < 256:
             #if a 256x256 cant be made, select a different random image from the dataset
             rand = random.randint(0, len(os.listdir(self.imgdir))-1)
             return self[rand]
-
-        lab = self.labfiles[idx]
-        lab = cv2.imread(os.path.join(self.labdir, lab))
 
         #apply same random crop to label and image
         img, lab = np.array(img), np.array(lab)
@@ -99,15 +97,14 @@ class ImageData(Dataset):
 
         return img, lab
 
-"""
+
 data = ImageData(img_path_train, label_path_train)
-d = data[1490]
+d = data[550]
 f = plt.figure()
 f.add_subplot(1,2,1)
 plt.imshow(d[0][0])
 f.add_subplot(1,2,2)
 plt.imshow(d[1][0])
 plt.show()
-"""
 
 
