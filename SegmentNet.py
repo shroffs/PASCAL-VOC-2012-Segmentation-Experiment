@@ -1,11 +1,13 @@
 import torch.nn as nn
 import torch
-import torchvision.models as models
 
+#download state dictionary of pretrained VGG16
 PATH = "./"
 torch.hub.load_state_dict_from_url('https://s3.amazonaws.com/pytorch/models/vgg16_bn-6c64b313.pth', model_dir=PATH, progress=True)
 
 class contract2(nn.Module):
+    """Contract Layer with 2 convolutions
+    """
 
     def __init__(self, in_channel, out_channel):
         super(contract2, self).__init__()
@@ -22,9 +24,6 @@ class contract2(nn.Module):
         self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x):
-        """ Residual connection between all sequential conv layers and returns skip to be use layer in expanding output same size
-
-        """
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
         skip = x.clone()
@@ -33,7 +32,8 @@ class contract2(nn.Module):
         return x, skip
 
 class contract3(nn.Module):
-
+    """Contract Layer with 2 convolutions
+    """
     def __init__(self, in_channel, out_channel):
         super(contract3, self).__init__()
 
@@ -63,7 +63,8 @@ class contract3(nn.Module):
         return x, skip
 
 class bottleneck(nn.Module):
-
+    """bottleneck layer in the middle of the network
+    """
     def __init__(self, in_channel, out_channel):
         super(bottleneck, self).__init__()
 
@@ -78,9 +79,7 @@ class bottleneck(nn.Module):
 
 
     def forward(self, x):
-        """ Residual connection between all sequential conv layers and returns skip to be use layer in expanding output same size
 
-        """
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.dropout(x)
 
@@ -88,6 +87,8 @@ class bottleneck(nn.Module):
 
 
 class expand(nn.Module):
+    """Expansion layer the takes in a skip
+    """
 
     def __init__(self, in_channel, out_channel):
         super(expand, self).__init__()
@@ -104,9 +105,6 @@ class expand(nn.Module):
         self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x, skip=None):
-        """Residual connection between all sequential conv layers and takes in skip from contracting layer of same size
-
-        """
 
         x = torch.cat((skip, x), dim=1)
         x = self.bn1(self.relu(self.conv1(x)))
@@ -116,7 +114,8 @@ class expand(nn.Module):
         return x
 
 class expand_1(nn.Module):
-
+    """Expansion layer that does not take in a skip
+    """
     def __init__(self, in_channel, out_channel):
         super(expand_1, self).__init__()
 
@@ -132,9 +131,7 @@ class expand_1(nn.Module):
         self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x):
-        """Residual connection between all sequential conv layers and takes in skip from contracting layer of same size
 
-        """
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
         x = self.dropout(x)
@@ -155,7 +152,9 @@ class SegmentNet(nn.Module):
         self.contract4 = contract3(256, 512)
         self.contract5 = contract3(512, 512)
 
-        self.bottleneck = bottleneck(512, 4096)
+        self.bottleneck1 = bottleneck(512, 4096)
+        self.bottleneck2 = bottleneck(4096, 4096)
+
 
         # Expanding
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
@@ -188,7 +187,8 @@ class SegmentNet(nn.Module):
         x, _ = self.contract5(x)
         x = self.pool(x)
 
-        x = self.bottleneck(x)
+        x = self.bottleneck1(x)
+        x = self.bottleneck2(x)
 
         x = self.upsample(x)
         x = self.expand1(x)
@@ -205,12 +205,10 @@ class SegmentNet(nn.Module):
 
         return x
 
-"""
-model = SegmentNet()
-model.load_state_dict(torch.load(PATH), strict=False)
-model.eval()
+if __name__=='__main__':
+    model = SegmentNet()
+    model.eval()
 
-print("Model's state_dict:")
-for param_tensor in model.state_dict():
-    print(param_tensor, "\t", model.state_dict()[param_tensor].size())
-"""
+    print("Model's state_dict:")
+    for param_tensor in model.state_dict():
+        print(param_tensor, "\t", model.state_dict()[param_tensor].size())
