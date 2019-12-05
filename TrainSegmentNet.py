@@ -40,6 +40,17 @@ def net_init(model):
         if model.bias is not None:
             model.bias.data.fill_(0.0)
 
+def param_freeze(model, param_num):
+    """ Freeze weigths and bias within the model
+        param_num: number of parameters at beginning of network to freeze
+    """
+    count = 0
+    for p in model.parameters():
+      count +=1
+      if count <= param_num:
+        p.requires_grad_(False)
+    return model
+
 #Initialize Model
 net = SegmentNet().type(torch.cuda.FloatTensor)
 #Apply Initialization to weights
@@ -49,6 +60,8 @@ net_dict = net.state_dict()
 pretrained_dict = torch.load(VGG_PATH)
 transfer_dict = load_pretraining(net_dict, pretrained_dict)
 net.load_state_dict(transfer_dict)
+#freeze VGG16 part of the net
+net = param_freeze(net, 52)
 
 wandb.watch(net)
 print("completed")
