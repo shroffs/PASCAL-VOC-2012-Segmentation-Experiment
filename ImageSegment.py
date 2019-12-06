@@ -65,8 +65,7 @@ def decode_image(label): #1x512x512
 
     for i in range(len(label)):
         for j in range(len(label[i])):
-            res[i][j] = classes[np.argmax(scisp.softmax(label[i][j]))]
-
+            res[i][j] = classes[np.argmax(label[i][j])]
     return res
 
 
