@@ -16,7 +16,7 @@ class contract2(nn.Module):
         self.out_channel = out_channel
 
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout2d(0.1)
+        self.dropout = nn.Dropout2d(0.01)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
@@ -27,7 +27,6 @@ class contract2(nn.Module):
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
         skip = x.clone()
-        x = self.dropout(x)
 
         return x, skip
 
@@ -41,7 +40,7 @@ class contract3(nn.Module):
         self.out_channel = out_channel
 
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout2d(0.1)
+        self.dropout = nn.Dropout2d(0.01)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
@@ -58,7 +57,6 @@ class contract3(nn.Module):
         x = self.bn2(self.relu(self.conv2(x)))
         x = self.bn3(self.relu(self.conv3(x)))
         skip = x.clone()
-        x = self.dropout(x)
 
         return x, skip
 
@@ -81,8 +79,6 @@ class bottleneck(nn.Module):
     def forward(self, x):
 
         x = self.bn1(self.relu(self.conv1(x)))
-        x = self.dropout(x)
-
         return x
 
 
@@ -109,7 +105,6 @@ class expand(nn.Module):
         x = torch.cat((skip, x), dim=1)
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
-        x = self.dropout(x)
 
         return x
 
@@ -134,7 +129,6 @@ class expand_1(nn.Module):
 
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
-        x = self.dropout(x)
 
         return x
 
@@ -152,9 +146,7 @@ class SegmentNet(nn.Module):
         self.contract4 = contract3(256, 512)
         self.contract5 = contract3(512, 512)
 
-        self.bottleneck1 = bottleneck(512, 4096)
-        self.bottleneck2 = bottleneck(4096, 4096)
-
+        self.bottleneck = bottleneck(512, 4096)
 
         # Expanding
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
@@ -187,8 +179,7 @@ class SegmentNet(nn.Module):
         x, _ = self.contract5(x)
         x = self.pool(x)
 
-        x = self.bottleneck1(x)
-        x = self.bottleneck2(x)
+        x = self.bottleneck(x)
 
         x = self.upsample(x)
         x = self.expand1(x)
