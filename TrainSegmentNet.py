@@ -1,4 +1,4 @@
-from SegmentNet import SegmentNet
+from SegmentNet2 import SegmentNet2
 from DatasetCreate import ImageData
 from TverskyLoss import tversky_loss
 from LoadPretrainedVGG16 import load_pretraining
@@ -52,7 +52,7 @@ def param_freeze(model, param_num):
     return model
 
 #Initialize Model
-net = SegmentNet().type(torch.cuda.FloatTensor)
+net = SegmentNet2().type(torch.cuda.FloatTensor)
 #Apply Initialization to weights
 net.apply(net_init)
 #load pretrained weights
