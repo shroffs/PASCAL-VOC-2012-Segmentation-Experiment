@@ -1,4 +1,4 @@
-from SegmentNet import SegmentNet
+from SegmentNet2 import SegmentNet2
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +13,7 @@ device = torch.device(0)
 
 #Load in net and parameters
 net_state_dict = "./TrainedNet5"
-net = SegmentNet().type(torch.cuda.FloatTensor)
+net = SegmentNet2().type(torch.cuda.FloatTensor)
 net.load_state_dict(torch.load(net_state_dict))
 net.eval()
 
@@ -54,7 +54,7 @@ def decode_image(label): #1x512x512
     h,w,c = label.shape
 
     #initalize output image
-    res = np.zeros((h, w, 3), dtype=int)
+    res = np.zeros((h, w), dtype=int)
 
     #create class pixel values
     classes = [[0, 0, 0], [0, 0, 128], [0, 128, 0], [0, 128, 128],
@@ -65,7 +65,7 @@ def decode_image(label): #1x512x512
 
     for i in range(len(label)):
         for j in range(len(label[i])):
-            res[i][j] = classes[np.argmax(label[i][j])]
+            res[i][j] = np.argmax(label[i][j])
     return res
 
 

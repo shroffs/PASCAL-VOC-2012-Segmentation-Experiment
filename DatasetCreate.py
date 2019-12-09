@@ -16,7 +16,8 @@ label_path_val = "./VOCdevkit/VOC2012/SegmentValLabels"
 
 
 class ImageData(Dataset):
-    """Create image dataset from directory of images and  directory of labels
+    """Create image dataset from folder
+
     """
 
     def __init__(self, imgdir, labeldir, transform=None):
@@ -24,6 +25,7 @@ class ImageData(Dataset):
         self.imgdir = imgdir
         self.imgfiles = os.listdir(imgdir)
         self.labdir = labeldir
+        self.labfiles = os.listdir(labeldir)
 
         # create class bases on pixel values
         self.classes = [[0, 0, 0], [192, 224, 224], [0, 0, 128], [0, 128, 0], [0, 128, 128],
@@ -33,35 +35,32 @@ class ImageData(Dataset):
                         [0, 192, 128], [128, 64, 0]]
         # These pixel values are linearly dependent so we use a dot product to make them distinct
         self.indep_classes = np.dot(self.classes, [1, 10, 100])
-        #And create a dictionary
-        self.dictionary = dict(
-            zip(self.indep_classes, [0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]))
+        self.dictionary = dict(zip(self.indep_classes, range(22)))
 
     def class_enc(self, arr):
         """ Takes HxWx3 label and encodes to 1xHxW
         """
         h, w = arr.shape[0], arr.shape[1]
         arr = np.dot(arr, [1, 10, 100])
-        # Create placeholder array
+        # Create higher dimension placeholder array
         res = np.zeros((h, w, 1))
 
         for i in range(len(arr)):
             for j in range(len(arr[i])):
-                #replace pixel values with integer labels
-                res[i][j] = self.dictionary[arr[i][j]]
-
+                try:
+                    res[i][j] = self.dictionary[arr[i][j]]
+                except KeyError:
+                    # The the pixel value does not belong to a class make it border class
+                    print(i, j, arr[i][j])
         return res
 
     def random_crop(self, img, size):
-        """Takes HxWxC img and returns SizexSizexC img
+        """Takes HxWxC img and returns sizexsizexC img
         """
         h, w = img.shape[0], img.shape[1]
-
-        #pick a random valid point to be the upper left corner of the crop
         p1 = random.randint(0, h - size)
         p2 = random.randint(0, w - size)
 
-        #return the cropped img
         return img[p1:p1 + size, p2:p2 + size, :]
 
     def __len__(self):
@@ -69,14 +68,11 @@ class ImageData(Dataset):
 
     def __getitem__(self, idx):
 
-        #image filename
         img = self.imgfiles[idx]
-        #read label and img with image filename
         lab = cv2.imread(os.path.join(self.labdir, img[:-4] + ".png"))
         img = cv2.imread(os.path.join(self.imgdir, img))
 
-        #if the right sized crop if impossible choose a different img (this is rare)
-        if img.shape[0] < 256 or img.shape[1] < 256 or lab is None:
+        if img.shape[0] < 224 or img.shape[1] < 224 or lab is None:
             # if a 256x256 cant be made, select a different random image from the dataset
             rand = random.randint(0, len(os.listdir(self.imgdir)) - 1)
             return self[rand]
@@ -84,7 +80,7 @@ class ImageData(Dataset):
         # apply same random crop to label and image
         img, lab = np.array(img), np.array(lab)
         both = np.concatenate((img, lab), axis=2)
-        both = self.random_crop(both, 256)
+        both = self.random_crop(both, 224)
         img, lab = np.split(both, 2, axis=2)
 
         # make CxHxW
@@ -97,7 +93,7 @@ class ImageData(Dataset):
         normalize = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         img = normalize(img)
 
-        # encode classes on label
+        # encode classes
         lab = self.class_enc(lab)
 
         # make CxHxW

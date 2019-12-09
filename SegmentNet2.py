@@ -87,6 +87,34 @@ class bottleneck(nn.Module):
         return x
 
 
+class expand(nn.Module):
+
+    def __init__(self, in_channel, out_channel, has_skip=False):
+        super(expand, self).__init__()
+
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+
+        self.relu = nn.ReLU()
+        self.has_skip = has_skip
+        if self.has_skip:
+            self.skip_conv = nn.Conv2d(self.in_channel, self.in_channel, 1)
+
+        self.convt = nn.ConvTranspose2d(self.in_channel, self.out_channel, 3, stride=2)
+        self.bn1 = nn.BatchNorm2d(self.out_channel)
+        self.conv = nn.Conv2d(self.out_channel, self.out_channel, 2)
+        self.bn2 = nn.BatchNorm2d(self.out_channel)
+
+    def forward(self, x, skip):
+
+        if self.has_skip:
+            skip = self.skip_conv(skip)
+            x = torch.add(x, skip)
+        x = self.bn1(self.relu(self.convt(x)))
+        x = self.bn2(self.relu(self.conv(x)))
+        return x
+
+
 class SegmentNet2(nn.Module):
 
     def __init__(self):
@@ -102,28 +130,20 @@ class SegmentNet2(nn.Module):
         self.contract4 = contract3(256, 512)  # 32x32 o
         self.contract5 = contract3(512, 512)  # 16x16 o
 
-        self.bottleneck = bottleneck(512, 4096)  # 8x8 o
+        self.bottleneck1 = bottleneck(512, 4096)  # 8x8 o
+        self.bottleneck2 = bottleneck(4096, 4096)
 
         # Expanding
-        self.expand1_1 = nn.ConvTranspose2d(4096, 512, 3, dilation=2)  # 8x8 -> 12x12
-        self.expand1_2 = nn.ConvTranspose2d(512, 512, 3, dilation=2)  # 12x12 -> 16x16
-        self.expand2_1 = nn.ConvTranspose2d(512, 256, 3, dilation=3)  # 16x16 -> 22x22
-        self.expand2_2 = nn.ConvTranspose2d(256, 256, 3, dilation=5)  # 22x2 -> 32x32
-        self.bn2 = nn.BatchNorm2d(256)
-        self.expand3_1 = nn.ConvTranspose2d(256 + 512, 256, 3, dilation=3)  # 32x32 w/s -> 38x38
-        self.expand3_2 = nn.ConvTranspose2d(256, 128, 3, dilation=3)  # 38x38 -> 44x44
-        self.expand3_3 = nn.ConvTranspose2d(128, 128, 3, dilation=4)  # 44x44 -> 52x52
-        self.bn3 = nn.BatchNorm2d(128)
-        self.expand3_4 = nn.ConvTranspose2d(128, 128, 3, dilation=3)  # 52x52 -> 58x58
-        self.expand3_5 = nn.ConvTranspose2d(128, 128, 3, dilation=3)  # 58x58 -> 64x64
-        self.expand4_1 = nn.ConvTranspose2d(128 + 256, 128, 3, dilation=1, stride=2)  # 64x64 w/s-> 129x129
-        self.expand4_2 = nn.Conv2d(128, 64, 2)  # 129x129-> 128x128
-        self.bn4 = nn.BatchNorm2d(64)
-        self.expand5_1 = nn.ConvTranspose2d(64 + 128, 64, 3, dilation=1, stride=2)  # 128x128 w/s-> 257x257
-        self.expand5_2 = nn.Conv2d(64, 64, 2)  # 257x257-> 256x256
-        self.bn5 = nn.BatchNorm2d(64)
-        self.expand6_1 = nn.Conv2d(64 + 64, 64, 3, padding=1)  # 256x256-> 256x256
-        self.conv7 = nn.Conv2d(64, 21, 1)
+        self.expand1 = expand(4096, 512, has_skip=False)  # 8x8 i
+        self.expand2 = expand(512, 512, has_skip=False)  # 16x16 i
+        self.expand3 = expand(512, 256, has_skip=True)  # 32x32 i
+        self.expand4 = expand(256, 128, has_skip=True)  # 64x64i
+        self.expand5 = expand(128, 64, has_skip=True)  # 128x128 i
+        self.expand6_1 = nn.Conv2d(64, 64, 3, padding=1)  # 256x256 i
+        self.bn6_1 = nn.BatchNorm2d(64)
+        self.expand6_2 = nn.Conv2d(64, 32, 3, padding=1)
+        self.bn6_2 = nn.BatchNorm2d(32)
+        self.conv7 = nn.Conv2d(32, 22, 1)
 
     def forward(self, x):
         """Network predicts labels for every pixel in the arr x
@@ -146,31 +166,17 @@ class SegmentNet2(nn.Module):
         x, _ = self.contract5(x)
         x = self.pool(x)
 
-        x = self.bottleneck(x)
+        x = self.bottleneck1(x)
+        x = self.bottleneck2(x)
 
-        x = self.relu(self.expand1_1(x))
-        x = self.relu(self.expand1_2(x))
-
-        x = self.relu(self.expand2_1(x))
-        x = self.bn2(self.relu(self.expand2_2(x)))
-
-        x = torch.cat((skip4, x), dim=1)
-        x = self.relu(self.expand3_1(x))
-        x = self.relu(self.expand3_2(x))
-        x = self.bn3(self.relu(self.expand3_3(x)))
-        x = self.relu(self.expand3_4(x))
-        x = self.relu(self.expand3_5(x))
-
-        x = torch.cat((skip3, x), dim=1)
-        x = self.relu(self.expand4_1(x))
-        x = self.bn4(self.relu(self.expand4_2(x)))
-
-        x = torch.cat((skip2, x), dim=1)
-        x = self.relu(self.expand5_1(x))
-        x = self.bn5(self.relu(self.expand5_2(x)))
-
-        x = torch.cat((skip1, x), dim=1)
-        x = self.relu(self.expand6_1(x))
+        x = self.expand1(x, None)
+        x = self.expand2(x, None)
+        x = self.expand3(x, skip4)
+        x = self.expand4(x, skip3)
+        x = self.expand5(x, skip2)
+        x = torch.add(x, skip1)
+        x = self.bn6_1(self.relu(self.expand6_1(x)))
+        x = self.bn6_2(self.relu(self.expand6_2(x)))
 
         x = self.conv7(x)
 
@@ -178,7 +184,7 @@ class SegmentNet2(nn.Module):
 
 
 if __name__ == '__main__':
-    model = SegmentNet()
+    model = SegmentNet2()
     model.eval()
 
     print("Model's state_dict:")

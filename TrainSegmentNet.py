@@ -72,9 +72,9 @@ def train(net):
 
     print("Training Beginning")
 
-    optimizer = optim.SGD(net.parameters(), 1e-4, momentum=0.9, weight_decay=5e-4)
-    weights = torch.tensor([1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], dtype=torch.float)
-    criterion = nn.CrossEntropyLoss(weight=weights).cuda()
+    optimizer = optim.SGD(net.parameters(), 1e-2, momentum=0.9, weight_decay=5e-4)
+    #weights = torch.tensor([1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], dtype=torch.float)
+    #criterion = nn.CrossEntropyLoss(ignore_index=1).cuda()
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1)
 
     for epoch in range(EPOCHS):
@@ -91,7 +91,9 @@ def train(net):
             output_label = net(X)
 
             label = label.squeeze(1)
-            loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
+            #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
+            loss = tversky_loss(true=label.type(torch.cuda.LongTensor), logits=output_label.type(torch.cuda.FloatTensor), alpha=0.3, beta=0.7)
+
 
             loss.backward()
             optimizer.step()
@@ -110,13 +112,15 @@ def train(net):
             full_val_loss = 0.0
             for i, (x, y) in enumerate(tqdm(val_loader)):
 
-                val_img, val_lab = x.type(torch.cuda.FloatTensor), y.type(torch.cuda.FloatTensor)
-                output_label = net(val_img)
+                X, label = x.type(torch.cuda.FloatTensor), y.type(torch.cuda.FloatTensor)
+                output_label = net(X)
 
-                val_lab = val_lab.squeeze(1)
-                val_loss = criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
+                label = label.squeeze(1)
+                #val_loss = criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
+                val_loss = tversky_loss(true=label.type(torch.cuda.LongTensor), logits=output_label.type(torch.cuda.FloatTensor), alpha=0.3, beta=0.7)
 
-                acc = (tversky_loss(val_lab.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)-1)*-1
+
+                acc = (tversky_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)-1)*-1
 
                 running_val_loss += val_loss.item()
                 running_val_acc += acc
