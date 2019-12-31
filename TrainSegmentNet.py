@@ -9,6 +9,7 @@ import torch.nn as nn
 import os
 from tqdm import tqdm
 import wandb
+import matplotlib.pyplot as plt
 
 wandb.init(project="segmentation-net")
 
@@ -28,7 +29,7 @@ device = torch.device('cuda:0')
 
 #Path to VGG16 state dictionary
 PATH = "./"
-VGG_PATH = os.path.join(PATH,"vgg16_bn-6c64b313.pth")
+VGG_PATH = os.path.join(PATH,"vgg16-397923af.pth")
 
 print("Initializing Network...")
 def net_init(model):
@@ -36,7 +37,7 @@ def net_init(model):
     """
     classname = model.__class__.__name__
     if classname.find('Conv2d') != -1:
-        model.weight.data.uniform_(0.0, 0.05)
+        model.weight.data.uniform_(0.0, 1.0)
         if model.bias is not None:
             model.bias.data.fill_(0.0)
 
@@ -61,21 +62,21 @@ pretrained_dict = torch.load(VGG_PATH)
 transfer_dict = load_pretraining(net_dict, pretrained_dict)
 net.load_state_dict(transfer_dict)
 #freeze VGG16 part of the net
-net = param_freeze(net, 52)
+net = param_freeze(net, 26)
 
 wandb.watch(net)
 print("completed")
 
-EPOCHS = 50
+EPOCHS = 25
 
 def train(net):
 
     print("Training Beginning")
 
-    optimizer = optim.SGD(net.parameters(), 1e-2, momentum=0.9, weight_decay=5e-4)
-    #weights = torch.tensor([1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], dtype=torch.float)
-    #criterion = nn.CrossEntropyLoss(ignore_index=1).cuda()
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1)
+    optimizer = optim.SGD(net.parameters(), lr=1e-2,  weight_decay=5e-4, momentum=0.9)
+    weights = torch.tensor([1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10], dtype=torch.float)
+    criterion = nn.CrossEntropyLoss(weight=weights, ignore_index=1, reduction='mean').cuda()
+    #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1)
 
     for epoch in range(EPOCHS):
 
@@ -91,8 +92,9 @@ def train(net):
             output_label = net(X)
 
             label = label.squeeze(1)
-            #loss = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
-            loss = tversky_loss(true=label.type(torch.cuda.LongTensor), logits=output_label.type(torch.cuda.FloatTensor), alpha=0.3, beta=0.7)
+            #loss1 = criterion(output_label.type(torch.cuda.FloatTensor), label.type(torch.cuda.LongTensor))
+            loss = tversky_loss(true=label.type(torch.cuda.LongTensor), logits=output_label.type(torch.cuda.FloatTensor), alpha=0.5, beta=0.5)
+
 
 
             loss.backward()
@@ -117,7 +119,7 @@ def train(net):
 
                 label = label.squeeze(1)
                 #val_loss = criterion(output_label.type(torch.cuda.FloatTensor), val_lab.type(torch.cuda.LongTensor))
-                val_loss = tversky_loss(true=label.type(torch.cuda.LongTensor), logits=output_label.type(torch.cuda.FloatTensor), alpha=0.3, beta=0.7)
+                val_loss = tversky_loss(true=label.type(torch.cuda.LongTensor), logits=output_label.type(torch.cuda.FloatTensor), alpha=0.5, beta=0.5)
 
 
                 acc = (tversky_loss(label.type(torch.cuda.LongTensor), output_label.type(torch.cuda.FloatTensor), eps=1e-4, alpha=0.5, beta=0.5)-1)*-1
@@ -131,8 +133,8 @@ def train(net):
                     running_val_loss = 0.0
                     running_val_acc = 0.0
                     torch.cuda.empty_cache()
-        scheduler.step(full_val_loss)
+        #scheduler.step(full_val_loss)
 
 if __name__=='__main__':
     train(net)
-    torch.save(net.state_dict(), "./TrainedNet1")
+    torch.save(net.state_dict(), "./TrainedNet1_2")

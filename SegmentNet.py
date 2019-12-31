@@ -156,7 +156,7 @@ class SegmentNet(nn.Module):
         self.expand4 = expand(256, 128)
         self.expand5 = expand(128, 64)
 
-        self.conv10 = nn.Conv2d(64, 21, 1)
+        self.conv10 = nn.Conv2d(64, 22, 1)
 
     def forward(self, x):
         """Network predicts labels for every pixel in the arr x

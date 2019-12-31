@@ -3,7 +3,7 @@ import torch
 
 # download state dictionary of pretrained VGG16
 PATH = "./"
-torch.hub.load_state_dict_from_url('https://s3.amazonaws.com/pytorch/models/vgg16_bn-6c64b313.pth', model_dir=PATH,
+torch.hub.load_state_dict_from_url("https://download.pytorch.org/models/vgg16-397923af.pth", model_dir=PATH,
                                    progress=True)
 
 
@@ -21,13 +21,11 @@ class contract2(nn.Module):
         self.dropout = nn.Dropout2d(0.01)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
         self.conv2 = nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x):
-        x = self.bn1(self.relu(self.conv1(x)))
-        x = self.bn2(self.relu(self.conv2(x)))
+        x = self.relu(self.conv1(x))
+        x = self.relu(self.conv2(x))
         skip = x.clone()
 
         return x, skip
@@ -47,19 +45,16 @@ class contract3(nn.Module):
         self.dropout = nn.Dropout2d(0.01)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
         self.conv2 = nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
         self.conv3 = nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
-        self.bn3 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x):
         """ Residual connection between all sequential conv layers and returns skip to be use layer in expanding output same size
 
         """
-        x = self.bn1(self.relu(self.conv1(x)))
-        x = self.bn2(self.relu(self.conv2(x)))
-        x = self.bn3(self.relu(self.conv3(x)))
+        x = self.relu(self.conv1(x))
+        x = self.relu(self.conv2(x))
+        x = self.relu(self.conv3(x))
         skip = x.clone()
 
         return x, skip
@@ -79,10 +74,9 @@ class bottleneck(nn.Module):
         self.dropout = nn.Dropout2d(0.1)
 
         self.conv1 = nn.Conv2d(self.in_channel, self.out_channel, 1)
-        self.bn1 = nn.BatchNorm2d(self.out_channel, eps=1e-5)
 
     def forward(self, x):
-        x = self.bn1(self.relu(self.conv1(x)))
+        x = self.relu(self.conv1(x))
 
         return x
 
@@ -102,8 +96,6 @@ class expand(nn.Module):
 
         self.convt = nn.ConvTranspose2d(self.in_channel, self.out_channel, 3, stride=2)
         self.bn1 = nn.BatchNorm2d(self.out_channel)
-        self.conv = nn.Conv2d(self.out_channel, self.out_channel, 2)
-        self.bn2 = nn.BatchNorm2d(self.out_channel)
 
     def forward(self, x, skip):
 
@@ -111,7 +103,7 @@ class expand(nn.Module):
             skip = self.skip_conv(skip)
             x = torch.add(x, skip)
         x = self.bn1(self.relu(self.convt(x)))
-        x = self.bn2(self.relu(self.conv(x)))
+        x = x[:,:,:-1,:-1]
         return x
 
 
@@ -131,10 +123,10 @@ class SegmentNet2(nn.Module):
         self.contract5 = contract3(512, 512)  # 16x16 o
 
         self.bottleneck1 = bottleneck(512, 4096)  # 8x8 o
-        self.bottleneck2 = bottleneck(4096, 4096)
+        self.bottleneck2 = bottleneck(4096, 2048)
 
         # Expanding
-        self.expand1 = expand(4096, 512, has_skip=False)  # 8x8 i
+        self.expand1 = expand(2048, 512, has_skip=False)  # 8x8 i
         self.expand2 = expand(512, 512, has_skip=False)  # 16x16 i
         self.expand3 = expand(512, 256, has_skip=True)  # 32x32 i
         self.expand4 = expand(256, 128, has_skip=True)  # 64x64i

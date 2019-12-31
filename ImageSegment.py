@@ -12,7 +12,7 @@ import random
 device = torch.device(0)
 
 #Load in net and parameters
-net_state_dict = "./TrainedNet5"
+net_state_dict = "./TrainedNet1"
 net = SegmentNet2().type(torch.cuda.FloatTensor)
 net.load_state_dict(torch.load(net_state_dict))
 net.eval()
@@ -45,16 +45,16 @@ def encode_image(img): #any image HxWx3
 
 def decode_image(label): #1x512x512
 
-    label = label.to('cpu').detach().numpy()
+    label = label.to('cpu').detach()
 
     #make HxWxC
-    label = np.squeeze(label, 0)
-    label = np.swapaxes(label, 0, 1)
-    label = np.swapaxes(label, 1, 2)
-    h,w,c = label.shape
+    label = torch.squeeze(label, 0)
+    label = torch.argmax(label, dim=0).numpy()
+
+    h,w = label.shape
 
     #initalize output image
-    res = np.zeros((h, w), dtype=int)
+    res = np.zeros((h, w, 3), dtype=int)
 
     #create class pixel values
     classes = [[0, 0, 0], [0, 0, 128], [0, 128, 0], [0, 128, 128],
@@ -62,10 +62,11 @@ def decode_image(label): #1x512x512
                     [0, 0, 192], [0, 128, 64], [0, 128, 192], [128, 0, 64], [128, 0, 192],
                     [128, 128, 64], [128, 128, 192], [0, 64, 0], [0, 64, 128], [0, 192, 0],
                     [0, 192, 128], [128, 64, 0]]
-
+    
     for i in range(len(label)):
         for j in range(len(label[i])):
-            res[i][j] = np.argmax(label[i][j])
+            res[i][j] = classes[label[i][j]]
+
     return res
 
 
